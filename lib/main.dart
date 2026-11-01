@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'onboarding_screen.dart'; // <--- Esta línea conecta la nueva pantalla
 
 void main() => runApp(const KairosApp());
 
@@ -53,7 +54,11 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 48),
             ElevatedButton.icon(
               onPressed: () {
-                // Aquí irá la navegación a la sesión de entrenamiento
+                // <--- AQUÍ ESTÁ LA MAGIA: Navegar al cuestionario
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+                );
               },
               icon: const Icon(Icons.play_arrow),
               label: const Text('Iniciar Entrenamiento'),
