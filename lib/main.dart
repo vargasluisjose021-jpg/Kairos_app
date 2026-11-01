@@ -1,10 +1,27 @@
 import 'package:flutter/material.dart';
-import 'onboarding_screen.dart'; // <--- Esta línea conecta la nueva pantalla
+import 'package:isar/isar.dart';
+import 'package:path_provider/path_provider.dart';
+import 'user_model.dart';
+import 'onboarding_screen.dart';
 
-void main() => runApp(const KairosApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  final dir = await getApplicationDocumentsDirectory();
+  Isar.initializeIsarCore(download: true);
+  
+  final isar = await Isar.open(
+    [UserSchema],
+    directory: dir.path,
+  );
+  
+  runApp(KairosApp(isar: isar));
+}
 
 class KairosApp extends StatelessWidget {
-  const KairosApp({super.key});
+  final Isar isar;
+  
+  const KairosApp({super.key, required this.isar});
 
   @override
   Widget build(BuildContext context) {
@@ -20,13 +37,15 @@ class KairosApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
       ),
-      home: const HomeScreen(),
+      home: HomeScreen(isar: isar),
     );
   }
 }
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final Isar isar;
+  
+  const HomeScreen({super.key, required this.isar});
 
   @override
   Widget build(BuildContext context) {
@@ -53,12 +72,22 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 48),
             ElevatedButton.icon(
-              onPressed: () {
-                // <--- AQUÍ ESTÁ LA MAGIA: Navegar al cuestionario
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-                );
+              onPressed: () async {
+                // Verificar si ya existe un perfil guardado
+                final existingUser = await isar.users.filter().idGreaterOrEqual(0).findFirst();
+                
+                if (existingUser != null) {
+                  // Si existe, ir directo a la sesión (por ahora mostramos un mensaje)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Perfil cargado. Próximamente: Sesión de entrenamiento')),
+                  );
+                } else {
+                  // Si no existe, ir al onboarding
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => OnboardingScreen(isar: isar)),
+                  );
+                }
               },
               icon: const Icon(Icons.play_arrow),
               label: const Text('Iniciar Entrenamiento'),
