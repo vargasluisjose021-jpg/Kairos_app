@@ -18,10 +18,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
         
-      - name: Patch Isar namespace (Workaround for AGP 8+)
+      - name: Patch Isar (Namespace, Manifest & compileSdk)
         run: |
+          # 1. Arreglar el namespace
           sed -i '/^android {/a\    namespace "io.isar.isar_flutter_libs"' /home/runner/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          # 2. Arreglar el package en el manifiesto
           sed -i 's/package="dev.isar.isar_flutter_libs"//g' /home/runner/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/src/main/AndroidManifest.xml
+          # 3. FORZAR la versión de compilación a 34 (SOLUCIÓN AL ERROR ACTUAL)
+          sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' /home/runner/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
 
       - name: Build APK
         run: flutter build apk --debug --target-platform android-arm64
