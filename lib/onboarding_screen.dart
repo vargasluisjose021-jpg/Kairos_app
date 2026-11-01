@@ -14,13 +14,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String _frequency = '';
   List<String> _devices = [];
   double _controlLevel = 5;
-  String _goal = '';
+  List<String> _goals = [];
 
   void _nextStep() {
+    if (_currentStep == 0 && _gender.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor selecciona tu género')),
+      );
+      return;
+    }
+    if (_currentStep == 2 && _frequency.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor selecciona una frecuencia')),
+      );
+      return;
+    }
+    if (_currentStep == 5 && _goals.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor elige al menos un objetivo')),
+      );
+      return;
+    }
+
     if (_currentStep < 5) {
       setState(() => _currentStep++);
     } else {
-      // Aquí irá la lógica para guardar y pasar a la sesión
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Perfil guardado. Iniciando sesión...')),
       );
@@ -45,20 +63,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Barra de progreso
             LinearProgressIndicator(
               value: (_currentStep + 1) / 6,
               backgroundColor: Colors.grey[800],
               valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFE94560)),
             ),
             const SizedBox(height: 40),
-            
-            // Contenido dinámico según el paso
             Expanded(
               child: _buildStepContent(),
             ),
-
-            // Botones de navegación
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -195,12 +208,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('¿Cuál es tu objetivo principal?', style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        const Text('Puedes elegir varias opciones', style: TextStyle(fontSize: 14, color: Colors.white54)),
         const SizedBox(height: 24),
-        _buildOptionButton('Aumentar duración', _goal == 'Duración', () => setState(() => _goal = 'Duración')),
-        const SizedBox(height: 12),
-        _buildOptionButton('Mejor control corporal', _goal == 'Control', () => setState(() => _goal = 'Control')),
-        const SizedBox(height: 12),
-        _buildOptionButton('Conocimiento y datos', _goal == 'Datos', () => setState(() => _goal = 'Datos')),
+        _buildCheckboxOption('Aumentar duración', 'Duración'),
+        _buildCheckboxOption('Mejor control corporal', 'Control'),
+        _buildCheckboxOption('Conocimiento y datos', 'Datos'),
       ],
     );
   }
@@ -224,15 +237,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildCheckboxOption(String text, String value) {
     return CheckboxListTile(
       title: Text(text, style: const TextStyle(color: Colors.white)),
-      value: _devices.contains(value),
+      value: _devices.contains(value) || _goals.contains(value),
       activeColor: const Color(0xFFE94560),
       checkColor: Colors.white,
       onChanged: (bool? selected) {
         setState(() {
           if (selected == true) {
-            _devices.add(value);
+            if (!_devices.contains(value)) _devices.add(value);
+            if (!_goals.contains(value)) _goals.add(value);
           } else {
             _devices.remove(value);
+            _goals.remove(value);
           }
         });
       },
