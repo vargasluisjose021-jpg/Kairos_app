@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:isar/isar.dart';
+import 'user_model.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+  final Isar isar;
+  
+  const OnboardingScreen({super.key, required this.isar});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -15,6 +19,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   List<String> _devices = [];
   double _controlLevel = 5;
   List<String> _goals = [];
+
+  Future<void> _saveProfile() async {
+    final user = User()
+      ..gender = _gender
+      ..age = _age
+      ..frequency = _frequency
+      ..devices = _devices
+      ..controlLevel = _controlLevel
+      ..goals = _goals
+      ..createdAt = DateTime.now()
+      ..updatedAt = DateTime.now();
+    
+    await widget.isar.writeTxn(() => widget.isar.users.put(user));
+  }
 
   void _nextStep() {
     if (_currentStep == 0 && _gender.isEmpty) {
@@ -39,9 +57,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (_currentStep < 5) {
       setState(() => _currentStep++);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Perfil guardado. Iniciando sesión...')),
-      );
+      _saveProfile().then((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Perfil guardado exitosamente')),
+        );
+        Navigator.pop(context);
+      });
     }
   }
 
@@ -100,20 +121,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _buildStepContent() {
     switch (_currentStep) {
-      case 0:
-        return _buildGenderStep();
-      case 1:
-        return _buildAgeStep();
-      case 2:
-        return _buildFrequencyStep();
-      case 3:
-        return _buildDevicesStep();
-      case 4:
-        return _buildControlStep();
-      case 5:
-        return _buildGoalStep();
-      default:
-        return const SizedBox();
+      case 0: return _buildGenderStep();
+      case 1: return _buildAgeStep();
+      case 2: return _buildFrequencyStep();
+      case 3: return _buildDevicesStep();
+      case 4: return _buildControlStep();
+      case 5: return _buildGoalStep();
+      default: return const SizedBox();
     }
   }
 
