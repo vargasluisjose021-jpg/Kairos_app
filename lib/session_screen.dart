@@ -16,7 +16,6 @@ class SessionScreen extends StatefulWidget {
 
 class _SessionScreenState extends State<SessionScreen> with TickerProviderStateMixin {
   Timer? _sessionTimer;
-  Timer? _phaseTimer;
   int _totalSeconds = 0;
   int _phaseSeconds = 0;
   bool _isStimulationPhase = true; // true = estimulando, false = pausando
@@ -94,7 +93,8 @@ class _SessionScreenState extends State<SessionScreen> with TickerProviderStateM
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            Text(phaseName, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: phaseColor, textAlign: TextAlign.center)),
+            // CORREGIDO: textAlign está fuera del TextStyle
+            Text(phaseName, textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: phaseColor)),
             const SizedBox(height: 10),
             Text('Tiempo en fase: $_phaseSeconds s', style: const TextStyle(fontSize: 18, color: Colors.white70)),
             const SizedBox(height: 20),
