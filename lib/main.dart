@@ -3,6 +3,7 @@ import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'user_model.dart';
 import 'onboarding_screen.dart';
+import 'session_screen.dart'; // <--- Importamos la nueva pantalla
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -73,19 +74,18 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 48),
             ElevatedButton.icon(
               onPressed: () async {
-                // FORMA CORRECTA en Isar para verificar si existe un usuario
                 final existingUser = await isar.users.where().findFirst();
                 
-                if (existingUser != null) {
-                  // Si existe, mostramos mensaje (próximamente irá a la sesión)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('✅ Perfil cargado. Próximamente: Sesión de entrenamiento')),
-                  );
-                } else {
-                  // Si no existe, vamos al onboarding
+                if (existingUser == null) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => OnboardingScreen(isar: isar)),
+                  );
+                } else {
+                  // Si ya hay perfil, ir directo a la sesión
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SessionScreen()),
                   );
                 }
               },
