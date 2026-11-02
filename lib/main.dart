@@ -8,7 +8,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   final dir = await getApplicationDocumentsDirectory();
-  Isar.initializeIsarCore(download: true);
+  await Isar.initializeIsarCore(download: true);
   
   final isar = await Isar.open(
     [UserSchema],
@@ -73,16 +73,16 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 48),
             ElevatedButton.icon(
               onPressed: () async {
-                // Verificar si ya existe un perfil guardado
-                final existingUser = await isar.users.filter().idGreaterOrEqual(0).findFirst();
+                // FORMA CORRECTA en Isar para verificar si existe un usuario
+                final existingUser = await isar.users.where().findFirst();
                 
                 if (existingUser != null) {
-                  // Si existe, ir directo a la sesión (por ahora mostramos un mensaje)
+                  // Si existe, mostramos mensaje (próximamente irá a la sesión)
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Perfil cargado. Próximamente: Sesión de entrenamiento')),
+                    const SnackBar(content: Text('✅ Perfil cargado. Próximamente: Sesión de entrenamiento')),
                   );
                 } else {
-                  // Si no existe, ir al onboarding
+                  // Si no existe, vamos al onboarding
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => OnboardingScreen(isar: isar)),
