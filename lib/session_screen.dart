@@ -21,20 +21,19 @@ class _SessionScreenState extends State<SessionScreen> with TickerProviderStateM
   int _phaseSeconds = 0;
   bool _isStimulationPhase = true;
 
-  // Controladores de Animación para cada sistema fisiológico
-  late AnimationController _breathController; // Respiración
-  late AnimationController _paceController;   // Ritmo de Movimiento (Mano: subir/bajar)
-  late AnimationController _muscleController; // Tensión Muscular
+  // Controladores de Animación
+  late AnimationController _breathController;
+  late AnimationController _paceController;
+  late AnimationController _muscleController;
 
   late Animation<double> _breathScale;
-  late Animation<double> _pacePosition; // Posición vertical del indicador (0 = abajo, 1 = arriba)
+  late Animation<double> _pacePosition;
   late Animation<double> _muscleScale;
 
   @override
   void initState() {
     super.initState();
     
-    // Inicializar animaciones con velocidades base
     _breathController = AnimationController(vsync: this, duration: const Duration(seconds: 4));
     _paceController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000));
     _muscleController = AnimationController(vsync: this, duration: const Duration(seconds: 2));
@@ -72,7 +71,6 @@ class _SessionScreenState extends State<SessionScreen> with TickerProviderStateM
     _isStimulationPhase = !_isStimulationPhase;
     _phaseSeconds = _isStimulationPhase ? stimTime : pauseTime;
     
-    // Ajustar velocidades según la fase y nivel
     if (_isStimulationPhase) {
       int paceDuration = widget.user.userLevel == 1 ? 2500 : (widget.user.userLevel == 2 ? 1500 : 900);
       _paceController.duration = Duration(milliseconds: paceDuration);
@@ -99,10 +97,10 @@ class _SessionScreenState extends State<SessionScreen> with TickerProviderStateM
                       (widget.user.userLevel == 2 ? const Color(0xFFF5A623) : const Color(0xFFD0021B));
     Color phaseColor = _isStimulationPhase ? baseColor : const Color(0xFF8B0000);
         
-    String phaseName = _isStimulationPhase ? "FASE ACTIVA" : "¡ALTO! PAUSA OBLIGATORIA";
-    String mainInstruction = _isStimulationPhase 
-        ? "Sincroniza los 3 ritmos. No pierdas el control." 
-        : "Detén todo movimiento. Relaja el músculo. Respira profundo.";
+    String phaseName = _isStimulationPhase ? "FASE ACTIVA" : "¡ALTO! PAUSA";
+    String instruction = _isStimulationPhase 
+        ? "Sincroniza respiración, mano y músculo" 
+        : "Detén todo. Relaja. Respira.";
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
@@ -115,7 +113,6 @@ class _SessionScreenState extends State<SessionScreen> with TickerProviderStateM
         padding: const EdgeInsets.all(15.0),
         child: Column(
           children: [
-            // Cabecera de Fase
             Text(phaseName, textAlign: TextAlign.center, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: phaseColor)),
             const SizedBox(height: 5),
             Text('Tiempo: $_phaseSeconds s', style: const TextStyle(fontSize: 16, color: Colors.white70)),
@@ -123,73 +120,42 @@ class _SessionScreenState extends State<SessionScreen> with TickerProviderStateM
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(color: phaseColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10), border: Border.all(color: phaseColor, width: 1)),
-              child: Text(mainInstruction, textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: Colors.white)),
+              child: Text(instruction, textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: Colors.white)),
             ),
             const SizedBox(height: 15),
 
-            // PANEL DE CONTROL FISIOLÓGICO (3 Guías Separadas)
+            // MUÑECO ANATÓMICO TRANSLÚCIDO CON ÓRGANOS
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    // 1. GUÍA DE RESPIRACIÓN (Pulmones)
-                    _buildPhysiologicalGuide(
-                      title: "1. RESPIRACIÓN",
-                      subtitle: _isStimulationPhase ? "Inhala... Exhala" : "Solo exhala lento",
-                      icon: Icons.air,
-                      color: phaseColor,
-                      child: AnimatedBuilder(
-                        animation: _breathController,
-                        builder: (context, child) {
-                          return Transform.scale(scale: _breathScale.value, child: child);
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildLungShape(phaseColor, true),
-                            const SizedBox(width: 10),
-                            _buildLungShape(phaseColor, false),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-
-                    // 2. GUÍA DE RITMO DE MOVIMIENTO (Mano: SUBE / BAJA)
-                    _buildPhysiologicalGuide(
-                      title: "2. RITMO DE LA MANO",
-                      subtitle: _isStimulationPhase ? "Sigue el indicador" : "MANO DETENIDA",
-                      icon: Icons.pan_tool,
-                      color: phaseColor,
-                      child: _buildHandPaceGuide(phaseColor),
-                    ),
-                    const SizedBox(height: 15),
-
-                    // 3. GUÍA DE TENSIÓN MUSCULAR (Suelo Pélvico)
-                    _buildPhysiologicalGuide(
-                      title: "3. TENSIÓN MUSCULAR",
-                      subtitle: _isStimulationPhase ? "Contrae suavemente" : "RELAX TOTAL",
-                      icon: Icons.bolt,
-                      color: phaseColor,
-                      child: AnimatedBuilder(
-                        animation: _muscleController,
-                        builder: (context, child) {
-                          return Transform.scale(scale: _muscleScale.value, child: child);
-                        },
-                        child: Container(
-                          width: 120,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: phaseColor.withOpacity(0.6),
-                            borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(60), bottomRight: Radius.circular(60)),
-                            boxShadow: [BoxShadow(color: phaseColor.withOpacity(0.8), blurRadius: 15, spreadRadius: 5)],
-                          ),
-                          child: const Center(child: Icon(Icons.blur_on, color: Colors.white, size: 30)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Silueta del cuerpo (translúcida)
+                  _buildBodySilhouette(phaseColor),
+                  // Órganos internos animados
+                  _buildInternalOrgans(phaseColor),
+                  // Guía de ritmo de la mano (SUBE/BAJA) al lado derecho
+                  Positioned(
+                    right: 10,
+                    top: 100,
+                    child: _buildHandPaceGuide(phaseColor),
+                  ),
+                  // Etiquetas de las zonas
+                  Positioned(
+                    left: 10,
+                    top: 80,
+                    child: _buildZoneLabel('Respiración', phaseColor),
+                  ),
+                  Positioned(
+                    left: 10,
+                    top: 200,
+                    child: _buildZoneLabel('Corazón', phaseColor),
+                  ),
+                  Positioned(
+                    left: 10,
+                    bottom: 100,
+                    child: _buildZoneLabel('Suelo Pélvico', phaseColor),
+                  ),
+                ],
               ),
             ),
 
@@ -205,99 +171,172 @@ class _SessionScreenState extends State<SessionScreen> with TickerProviderStateM
     );
   }
 
-  // Widget Contenedor para cada Guía
-  Widget _buildPhysiologicalGuide({required String title, required String subtitle, required IconData icon, required Color color, required Widget child}) {
+  // Silueta del cuerpo humano translúcido
+  Widget _buildBodySilhouette(Color color) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(15),
+      width: 200,
+      height: 380,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(80),
+          topRight: Radius.circular(80),
+          bottomLeft: Radius.circular(40),
+          bottomRight: Radius.circular(40),
+        ),
+        border: Border.all(color: color.withOpacity(0.3), width: 2),
       ),
       child: Column(
         children: [
+          // Cabeza
+          Container(
+            width: 70,
+            height: 70,
+            margin: EdgeInsets.only(top: 10),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color.withOpacity(0.1),
+              border: Border.all(color: color.withOpacity(0.4), width: 2),
+            ),
+          ),
+          Spacer(),
+          // Piernas
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 10),
-              Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color, letterSpacing: 1)),
-              const Spacer(),
-              Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.white70, fontStyle: FontStyle.italic)),
+              Container(width: 50, height: 90, decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(25))),
+              Container(width: 50, height: 90, decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(25))),
             ],
           ),
-          const SizedBox(height: 15),
-          SizedBox(height: 140, child: Center(child: child)),
         ],
       ),
     );
   }
 
-  // Forma del Pulmón
-  Widget _buildLungShape(Color color, bool isLeft) {
+  // Órganos internos animados
+  Widget _buildInternalOrgans(Color color) {
     return Container(
-      width: 50,
-      height: 70,
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.5),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(isLeft ? 40 : 10),
-          topRight: Radius.circular(isLeft ? 10 : 40),
-          bottomLeft: const Radius.circular(20),
-          bottomRight: const Radius.circular(20),
-        ),
-        boxShadow: [BoxShadow(color: color.withOpacity(0.6), blurRadius: 10, spreadRadius: 2)],
+      width: 200,
+      height: 380,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Pulmones (parte superior)
+          Positioned(
+            top: 100,
+            child: AnimatedBuilder(
+              animation: _breathController,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _breathScale.value,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 45,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.6),
+                          borderRadius: BorderRadius.only(topLeft: Radius.circular(35), bottomLeft: Radius.circular(15), bottomRight: Radius.circular(15)),
+                          boxShadow: [BoxShadow(color: color.withOpacity(0.7), blurRadius: 10)],
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Container(
+                        width: 45,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.6),
+                          borderRadius: BorderRadius.only(topRight: Radius.circular(35), bottomLeft: Radius.circular(15), bottomRight: Radius.circular(15)),
+                          boxShadow: [BoxShadow(color: color.withOpacity(0.7), blurRadius: 10)],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          // Corazón/Diafragma (centro)
+          Positioned(
+            top: 170,
+            child: AnimatedBuilder(
+              animation: _muscleController,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _muscleScale.value,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: color.withOpacity(0.8),
+                      boxShadow: [BoxShadow(color: color.withOpacity(0.9), blurRadius: 15)],
+                    ),
+                    child: Center(child: Icon(Icons.favorite, color: Colors.white, size: 20)),
+                  ),
+                );
+              },
+            ),
+          ),
+          // Zona Pélvica (parte inferior)
+          Positioned(
+            bottom: 80,
+            child: AnimatedBuilder(
+              animation: _muscleController,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _muscleScale.value,
+                  child: Container(
+                    width: 90,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.7),
+                      borderRadius: BorderRadius.only(bottomLeft: Radius.circular(45), bottomRight: Radius.circular(45)),
+                      boxShadow: [BoxShadow(color: color.withOpacity(0.8), blurRadius: 15)],
+                    ),
+                    child: Center(child: Icon(Icons.blur_on, color: Colors.white, size: 25)),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // Guía de Ritmo de la Mano (Carril vertical con indicador SUBE/BAJA)
+  // Guía de ritmo de la mano (SUBE/BAJA)
   Widget _buildHandPaceGuide(Color color) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
       children: [
-        // Texto lateral: SUBE / BAJA
-        Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('SUBE', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color.withOpacity(0.7))),
-            Text('BAJA', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color.withOpacity(0.7))),
-          ],
-        ),
-        const SizedBox(width: 15),
-        // Carril vertical
+        Text('SUBE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+        SizedBox(height: 5),
         Container(
-          width: 6,
-          height: 120,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(3),
-          ),
+          width: 4,
+          height: 100,
+          decoration: BoxDecoration(color: color.withOpacity(0.3), borderRadius: BorderRadius.circular(2)),
           child: Stack(
             children: [
-              // Indicador que se mueve de arriba hacia abajo
               AnimatedBuilder(
                 animation: _paceController,
                 builder: (context, child) {
-                  // _pacePosition va de 0 (abajo) a 1 (arriba)
-                  // Invertimos para que 0 sea abajo y 1 sea arriba visualmente
-                  double topPosition = 120 * (1 - _pacePosition.value) - 20;
+                  double topPos = 100 * (1 - _pacePosition.value) - 15;
                   return Positioned(
-                    top: topPosition.clamp(0.0, 100.0),
-                    left: -17,
+                    top: topPos.clamp(0.0, 85.0),
+                    left: -13,
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: 30,
+                      height: 30,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: color,
-                        boxShadow: [BoxShadow(color: color.withOpacity(0.8), blurRadius: 15, spreadRadius: 3)],
+                        boxShadow: [BoxShadow(color: color.withOpacity(0.8), blurRadius: 10)],
                       ),
                       child: Center(
                         child: Icon(
-                          _pacePosition.value > 0.5 ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                          _pacePosition.value > 0.5 ? Icons.arrow_upward : Icons.arrow_downward,
                           color: Colors.white,
-                          size: 24,
+                          size: 16,
                         ),
                       ),
                     ),
@@ -307,29 +346,21 @@ class _SessionScreenState extends State<SessionScreen> with TickerProviderStateM
             ],
           ),
         ),
-        const SizedBox(width: 15),
-        // Texto de dirección
-        AnimatedBuilder(
-          animation: _paceController,
-          builder: (context, child) {
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  _pacePosition.value > 0.5 ? Icons.arrow_upward : Icons.arrow_downward,
-                  color: color,
-                  size: 30,
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  _pacePosition.value > 0.5 ? '↑ SUBE' : '↓ BAJA',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
-                ),
-              ],
-            );
-          },
-        ),
+        SizedBox(height: 5),
+        Text('BAJA', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
       ],
+    );
+  }
+
+  // Etiquetas de zonas
+  Widget _buildZoneLabel(String text, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(text, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
     );
   }
 
