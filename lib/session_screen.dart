@@ -19,7 +19,7 @@ class _SessionScreenState extends State<SessionScreen> with SingleTickerProvider
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
   }
 
@@ -41,7 +41,7 @@ class _SessionScreenState extends State<SessionScreen> with SingleTickerProvider
       } else if (level < 7) {
         _zoneColor = const Color(0xFFF5A623); // Naranja
         _instruction = "Nivel Medio: Activa el Core. Mantén el ritmo.";
-        _pulseController.duration = const Duration(seconds: 1.5); // Pulso medio
+        _pulseController.duration = const Duration(milliseconds: 1500); // CORREGIDO: 1.5 segundos
       } else if (level < 9) {
         _zoneColor = const Color(0xFFD0021B); // Rojo
         _instruction = "AL BORDE: Prepara el Suelo Pélvico. ¡Frena la mano!";
