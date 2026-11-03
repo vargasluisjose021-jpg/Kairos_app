@@ -5,7 +5,6 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'dart:async';
 import 'dart:math';
 import 'user_model.dart';
-import 'anatomy_painter.dart';
 
 class PelvicScreen extends StatefulWidget {
   final Isar isar;
@@ -25,7 +24,6 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
   int _repsCompleted = 0;
   final int _targetReps = 10;
   
-  // Telemetría: Acelerómetro REAL
   double _lastAccelValue = 0.0;
   List<double> _movementHistory = [];
   bool _movementDetected = false;
@@ -40,12 +38,8 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
   }
 
   void _startRealAccelerometer() {
-    // Leer el acelerómetro REAL del celular
     _accelSubscription = accelerometerEventStream().listen((AccelerometerEvent event) {
-      // Calcular la magnitud del vector de aceleración
       double magnitude = sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
-      
-      // Normalizar (la gravedad es ~9.8, restamos para ver solo el movimiento)
       double movement = (magnitude - 9.8).abs();
       
       setState(() {
@@ -53,7 +47,6 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
         _movementHistory.add(movement);
         if (_movementHistory.length > 50) _movementHistory.removeAt(0);
         
-        // Detectar si hay movimiento significativo (umbral: 0.5 m/s²)
         double avgMovement = _movementHistory.reduce((a, b) => a + b) / _movementHistory.length;
         _movementDetected = avgMovement > 0.5;
         if (_movementDetected) _movementCount++;
@@ -106,17 +99,15 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
     _accelSubscription?.cancel();
     HapticFeedback.heavyImpact();
     
-    // Validar si la sesión fue real (al menos 50 detecciones de movimiento)
     bool sessionValid = _movementCount > 50;
     
-    // Actualizar base de datos
     widget.user.totalSessions++;
     if (sessionValid) {
       widget.user.successfulSessions++;
       widget.user.streakDays++;
     }
     widget.user.lastSessionDate = DateTime.now();
-    widget.user.lastSessionHeartRatePeak = 85 + (_repsCompleted * 2); // Simulado por ahora
+    widget.user.lastSessionHeartRatePeak = 85 + (_repsCompleted * 2);
     widget.user.lastSessionMovementDetected = sessionValid;
     widget.user.updatedAt = DateTime.now();
     
@@ -149,7 +140,6 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
         backgroundColor: const Color(0xFF0F0F1A),
         title: const Text('Módulo 1: Suelo Pélvico', style: TextStyle(color: Colors.white)),
         actions: [
-          // Indicador de telemetría REAL
           Container(
             margin: const EdgeInsets.only(right: 10),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -159,7 +149,7 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
             ),
             child: Row(
               children: [
-                Icon(Icons.sensors, color: Colors.white, size: 16),
+                const Icon(Icons.sensors, color: Colors.white, size: 16),
                 const SizedBox(width: 5),
                 Text(
                   _movementDetected ? 'ACTIVO' : 'QUIETO',
@@ -177,7 +167,7 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
             Text('Repetición ${_repsCompleted + 1} de $_targetReps', style: const TextStyle(fontSize: 18, color: Colors.white70)),
             const SizedBox(height: 20),
 
-            // ILUSTRACIÓN ANATÓMICA CLÍNICA
+            // ILUSTRACIÓN ANATÓMICA CLÍNICA (Ahora integrada aquí)
             Container(
               height: 250,
               width: double.infinity,
@@ -192,27 +182,6 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
             ),
             const SizedBox(height: 20),
 
-            // ESPEJO DE DATOS: Onda de Movimiento REAL
-            Container(
-              height: 60,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey[900],
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _movementDetected ? const Color(0xFF00E676) : Colors.grey[800]!, width: 1),
-              ),
-              child: CustomPaint(
-                painter: MovementWavePainter(movementHistory: _movementHistory, color: _movementDetected ? const Color(0xFF00E676) : Colors.grey[600]!),
-              ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              _movementDetected ? '✓ Movimiento detectado' : '⚠ No detecto movimiento físico',
-              style: TextStyle(fontSize: 12, color: _movementDetected ? const Color(0xFF00E676) : Colors.orange),
-            ),
-            const SizedBox(height: 15),
-
-            // INSTRUCCIÓN MÉDICA PRINCIPAL
             Text(
               _isContracting ? "¡CONTRAE EL MÚSCULO PC!" : "KEGEL INVERSO: RELAJA",
               textAlign: TextAlign.center,
@@ -225,7 +194,6 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
             ),
             const SizedBox(height: 20),
 
-            // GUÍA CLÍNICA DETALLADA
             Container(
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
@@ -263,39 +231,63 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
   }
 }
 
-// Painter para la onda de movimiento REAL
-class MovementWavePainter extends CustomPainter {
-  final List<double> movementHistory;
-  final Color color;
+// ==========================================
+// ILUSTRACIÓN ANATÓMICA INTEGRADA
+// ==========================================
+class SagittalPelvisPainter extends CustomPainter {
+  final bool isContracting;
 
-  MovementWavePainter({required this.movementHistory, required this.color});
+  SagittalPelvisPainter({required this.isContracting});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = color
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
+    final double w = size.width;
+    final double h = size.height;
 
-    final Path path = Path();
+    final Paint bgPaint = Paint()..color = const Color(0xFF1A1A2E);
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, h), bgPaint);
+
+    final Paint bladderPaint = Paint()..color = const Color(0xFF4A90E2).withOpacity(0.6);
+    final Path bladderPath = Path()
+      ..moveTo(w * 0.3, h * 0.1)
+      ..quadraticBezierTo(w * 0.1, h * 0.3, w * 0.3, h * 0.5)
+      ..quadraticBezierTo(w * 0.5, h * 0.5, w * 0.5, h * 0.3)
+      ..quadraticBezierTo(w * 0.5, h * 0.1, w * 0.3, h * 0.1);
+    canvas.drawPath(bladderPath, bladderPaint);
+    _drawLabel(canvas, "Vejiga", w * 0.35, h * 0.25, const Color(0xFF4A90E2));
+
+    final Paint rectumPaint = Paint()..color = const Color(0xFF8B4513).withOpacity(0.6);
+    final Path rectumPath = Path()
+      ..moveTo(w * 0.7, h * 0.4)
+      ..quadraticBezierTo(w * 0.9, h * 0.6, w * 0.8, h * 0.9)
+      ..lineTo(w * 0.6, h * 0.9)
+      ..quadraticBezierTo(w * 0.7, h * 0.6, w * 0.5, h * 0.4);
+    canvas.drawPath(rectumPath, rectumPaint);
+    _drawLabel(canvas, "Recto", w * 0.75, h * 0.7, const Color(0xFF8B4513));
+
+    final Paint pcPaint = Paint()
+      ..color = isContracting ? const Color(0xFF00E676) : const Color(0xFFD0021B)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = isContracting ? 8 : 4;
     
-    if (movementHistory.isEmpty) return;
-
-    double xStep = size.width / (movementHistory.length - 1);
+    final Path pcPath = Path()
+      ..moveTo(w * 0.3, h * 0.5)
+      ..quadraticBezierTo(w * 0.5, h * 0.65, w * 0.7, h * 0.4);
     
-    for (int i = 0; i < movementHistory.length; i++) {
-      double x = i * xStep;
-      // Escalar el movimiento para que se vea bien en la pantalla
-      double y = size.height - (movementHistory[i] * size.height * 2).clamp(0.0, size.height);
-      
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
+    canvas.drawPath(pcPath, pcPaint);
+    _drawLabel(canvas, "Músculo PC", w * 0.5, h * 0.55, isContracting ? const Color(0xFF00E676) : const Color(0xFFD0021B));
 
-    canvas.drawPath(path, paint);
+    final Paint prostatePaint = Paint()..color = const Color(0xFFFF9800).withOpacity(0.7);
+    canvas.drawCircle(Offset(w * 0.45, h * 0.55), w * 0.08, prostatePaint);
+    _drawLabel(canvas, "Próstata", w * 0.45, h * 0.65, const Color(0xFFFF9800));
+  }
+
+  void _drawLabel(Canvas canvas, String text, double x, double y, Color color) {
+    final TextPainter textPainter = TextPainter(
+      text: TextSpan(text: text, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    textPainter.paint(canvas, Offset(x - textPainter.width / 2, y));
   }
 
   @override
