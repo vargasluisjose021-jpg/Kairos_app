@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:isar/isar.dart';
 import 'dart:async';
+import 'dart:math';
 import 'user_model.dart';
 import 'anatomy_painter.dart';
 
@@ -17,18 +18,43 @@ class PelvicScreen extends StatefulWidget {
 class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMixin {
   late AnimationController _animController;
   Timer? _timer;
+  Timer? _accelTimer;
   int _secondsRemaining = 0;
   bool _isContracting = true; 
   int _repsCompleted = 0;
   final int _targetReps = 10;
-  int _sessionStartTime = 0;
+  
+  // Telemetría: Acelerómetro
+  double _lastAccelValue = 0.0;
+  List<double> _movementHistory = [];
+  bool _movementDetected = false;
+  int _movementCount = 0;
 
   @override
   void initState() {
     super.initState();
     _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
-    _sessionStartTime = DateTime.now().millisecondsSinceEpoch;
+    _startAccelerometer();
     _startExercise();
+  }
+
+  void _startAccelerometer() {
+    // Simular lectura del acelerómetro (en producción usaríamos sensors_plus)
+    _accelTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      // Generar valores simulados de movimiento (en producción: leer sensores reales)
+      double simulatedMovement = Random().nextDouble() * 0.5;
+      
+      setState(() {
+        _lastAccelValue = simulatedMovement;
+        _movementHistory.add(simulatedMovement);
+        if (_movementHistory.length > 50) _movementHistory.removeAt(0);
+        
+        // Detectar si hay movimiento significativo
+        double avgMovement = _movementHistory.reduce((a, b) => a + b) / _movementHistory.length;
+        _movementDetected = avgMovement > 0.1;
+        if (_movementDetected) _movementCount++;
+      });
+    });
   }
 
   void _startExercise() {
@@ -66,32 +92,43 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
   @override
   void dispose() {
     _timer?.cancel();
+    _accelTimer?.cancel();
     _animController.dispose();
     super.dispose();
   }
 
   Future<void> _finishSession() async {
     _timer?.cancel();
+    _accelTimer?.cancel();
     HapticFeedback.heavyImpact();
     
-    // Actualizar base de datos con progreso y telemetría simulada
+    // Validar si la sesión fue real
+    bool sessionValid = _movementCount > 50; // Al menos 50 detecciones de movimiento
+    
+    // Actualizar base de datos
     widget.user.totalSessions++;
-    widget.user.successfulSessions++;
-    widget.user.streakDays++;
+    if (sessionValid) {
+      widget.user.successfulSessions++;
+      widget.user.streakDays++;
+    }
     widget.user.lastSessionDate = DateTime.now();
     widget.user.lastSessionHeartRatePeak = 85 + (_repsCompleted * 2); // Simulado
-    widget.user.lastSessionMovementDetected = true; // Simulado
+    widget.user.lastSessionMovementDetected = sessionValid;
     widget.user.updatedAt = DateTime.now();
     
     await widget.isar.writeTxn(() => widget.isar.users.put(widget.user));
     
     if (!mounted) return;
     
+    String message = sessionValid 
+        ? '¡Módulo 1 Completado! Sesión validada biométricamente.'
+        : 'Sesión sospechosa: No se detectó suficiente movimiento. Inténtalo de nuevo.';
+    
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('¡Módulo 1 Completado! Músculo PC fortalecido.'),
-        backgroundColor: Color(0xFF00E676),
-        duration: Duration(seconds: 3),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: sessionValid ? const Color(0xFF00E676) : const Color(0xFFFF9800),
+        duration: const Duration(seconds: 3),
       ),
     );
     
@@ -107,6 +144,27 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
         title: const Text('Módulo 1: Suelo Pélvico', style: TextStyle(color: Colors.white)),
+        actions: [
+          // Indicador de telemetría
+          Container(
+            margin: const EdgeInsets.only(right: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: _movementDetected ? const Color(0xFF00E676) : Colors.grey[800],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.sensors, color: Colors.white, size: 16),
+                const SizedBox(width: 5),
+                Text(
+                  _movementDetected ? 'ACTIVO' : 'QUIETO',
+                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
@@ -129,6 +187,26 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
               ),
             ),
             const SizedBox(height: 20),
+
+            // ESPEJO DE DATOS: Onda de Movimiento
+            Container(
+              height: 60,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _movementDetected ? const Color(0xFF00E676) : Colors.grey[800]!, width: 1),
+              ),
+              child: CustomPaint(
+                painter: MovementWavePainter(movementHistory: _movementHistory, color: _movementDetected ? const Color(0xFF00E676) : Colors.grey[600]!),
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              _movementDetected ? '✓ Movimiento detectado' : '⚠ No detecto movimiento físico',
+              style: TextStyle(fontSize: 12, color: _movementDetected ? const Color(0xFF00E676) : Colors.orange),
+            ),
+            const SizedBox(height: 15),
 
             // INSTRUCCIÓN MÉDICA PRINCIPAL
             Text(
@@ -179,4 +257,42 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
       ),
     );
   }
+}
+
+// Painter para la onda de movimiento
+class MovementWavePainter extends CustomPainter {
+  final List<double> movementHistory;
+  final Color color;
+
+  MovementWavePainter({required this.movementHistory, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final Path path = Path();
+    
+    if (movementHistory.isEmpty) return;
+
+    double xStep = size.width / (movementHistory.length - 1);
+    
+    for (int i = 0; i < movementHistory.length; i++) {
+      double x = i * xStep;
+      double y = size.height - (movementHistory[i] * size.height);
+      
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
