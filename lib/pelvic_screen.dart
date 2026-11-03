@@ -24,8 +24,10 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
   int _repsCompleted = 0;
   final int _targetReps = 10;
   
+  double _lastAccelValue = 0.0;
   List<double> _movementHistory = [];
   bool _movementDetected = false;
+  int _movementCount = 0;
 
   @override
   void initState() {
@@ -41,11 +43,13 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
       double movement = (magnitude - 9.8).abs();
       
       setState(() {
+        _lastAccelValue = movement;
         _movementHistory.add(movement);
         if (_movementHistory.length > 50) _movementHistory.removeAt(0);
         
-        double avgMovement = _movementHistory.isEmpty ? 0 : _movementHistory.reduce((a, b) => a + b) / _movementHistory.length;
+        double avgMovement = _movementHistory.reduce((a, b) => a + b) / _movementHistory.length;
         _movementDetected = avgMovement > 0.5;
+        if (_movementDetected) _movementCount++;
       });
     });
   }
@@ -86,49 +90,35 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
     _timer?.cancel();
     _accelSubscription?.cancel();
     HapticFeedback.heavyImpact();
-
+    
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: const Color(0xFF1A1A2E),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          title: const Row(
-            children: [
-              Icon(Icons.check_circle, color: Color(0xFF00E676), size: 28),
-              SizedBox(width: 10),
-              Text('Sesión Completada', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ],
+          title: const Text(
+            '¿Completaste el ejercicio correctamente?',
+            style: TextStyle(color: Colors.white, fontSize: 18),
           ),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '¿Completaste el ejercicio correctamente hoy?',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              SizedBox(height: 15),
-              Text(
-                'Sé honesto contigo mismo. Esto ayuda a la app a ajustar tu entrenamiento de forma precisa.',
-                style: TextStyle(color: Colors.white70, fontSize: 13, fontStyle: FontStyle.italic),
-              ),
-            ],
+          content: const Text(
+            'Sé honesto contigo mismo. Tu progreso depende de tu sinceridad.',
+            style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
           actions: [
             TextButton(
               onPressed: () {
-                _finishSession(false);
+                Navigator.pop(context);
+                _finishSession(successful: false);
               },
-              child: const Text('No lo hice bien', style: TextStyle(color: Colors.orange)),
+              child: const Text('No lo hice', style: TextStyle(color: Colors.redAccent)),
             ),
-            ElevatedButton(
+            TextButton(
               onPressed: () {
-                _finishSession(true);
+                Navigator.pop(context);
+                _finishSession(successful: true);
               },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00E676)),
-              child: const Text('Sí, lo hice bien', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text('Sí, lo completé', style: TextStyle(color: Color(0xFF00E676), fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -136,20 +126,197 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
     );
   }
 
-  Future<void> _finishSession(bool wasSuccessful) async {
-    Navigator.pop(context); // Cerrar el diálogo
-    
-    // Actualizar base de datos
-    widget.user.totalSessions++;
-    
-    if (wasSuccessful) {
-      widget.user.successfulSessions++;
-      widget.user.streakDays++;
-      // Aumentar dificultad un 10% para mañana
-      widget.user.baseTimeSeconds = (widget.user.baseTimeSeconds * 1.1).toInt();
+  Future<void> _finishSession({required bool successful}) async {
+    if (successful) {
+      widget.user.registerSuccessfulSession(1); // Módulo 1
     } else {
-      // Si no lo hizo bien, NO aumenta la racha ni la dificultad
-      // Se mantiene en el mismo nivel para mañana
+      widget.user.totalSessions++;
+      widget.user.updatedAt = DateTime.now();
     }
     
-    widget.user.last
+    await widget.isar.writeTxn(() => widget.isar.users.put(widget.user));
+    
+    if (!mounted) return;
+    
+    String message = successful 
+        ? '¡Sesión registrada! Nivel ${widget.user.module1CurrentLevel} | ${widget.user.module1SessionsCompleted}/7 sesiones'
+        : 'Sesión no completada. Mañana repetimos el mismo nivel.';
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: successful ? const Color(0xFF00E676) : const Color(0xFFFF9800),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+    
+    Navigator.pop(context);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _accelSubscription?.cancel();
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Color mainColor = _isContracting ? const Color(0xFF00E676) : const Color(0xFF4A90E2);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F0F1A),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0F0F1A),
+        title: const Text('Módulo 1: Suelo Pélvico', style: TextStyle(color: Colors.white)),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: _movementDetected ? const Color(0xFF00E676) : Colors.grey[800],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.sensors, color: Colors.white, size: 16),
+                const SizedBox(width: 5),
+                Text(
+                  _movementDetected ? 'ACTIVO' : 'QUIETO',
+                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          children: [
+            Text('Repetición ${_repsCompleted + 1} de $_targetReps', style: const TextStyle(fontSize: 18, color: Colors.white70)),
+            const SizedBox(height: 20),
+
+            Container(
+              height: 250,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: mainColor.withOpacity(0.3), width: 2),
+              ),
+              child: CustomPaint(
+                painter: SagittalPelvisPainter(isContracting: _isContracting),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            Text(
+              _isContracting ? "¡CONTRAE EL MÚSCULO PC!" : "KEGEL INVERSO: RELAJA",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: mainColor),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '$_secondsRemaining s',
+              style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 20),
+
+            Container(
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: Colors.grey[900], 
+                borderRadius: BorderRadius.circular(10),
+                border: Border(left: BorderSide(color: mainColor, width: 4))
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _isContracting 
+                      ? "🎯 CÓMO HACERLO: Aprieta el músculo como si detuvieras el flujo de orina a mitad del camino. Siente la tensión entre el escroto y el ano." 
+                      : "🎯 CÓMO HACERLO: Inhala profundo por la nariz. Empuja suavemente hacia afuera el suelo pélvico (como si fueras a orinar). Siente cómo se expande.",
+                    style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 10),
+                  const Divider(color: Colors.grey),
+                  const SizedBox(height: 5),
+                  const Text("⚠️ ERRORES CLÍNICOS A EVITAR:", style: TextStyle(fontSize: 12, color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 5),
+                  Text(
+                    _isContracting 
+                      ? "• NO contraigas glúteos, muslos o abdomen.\n• NO aguantes la respiración.\n• NO empujes hacia abajo." 
+                      : "• NO hagas fuerza abdominal.\n• NO levantes la pelvis.\n• NO es un empuje fuerte, debe ser sutil.",
+                    style: const TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class SagittalPelvisPainter extends CustomPainter {
+  final bool isContracting;
+
+  SagittalPelvisPainter({required this.isContracting});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+
+    final Paint bgPaint = Paint()..color = const Color(0xFF1A1A2E);
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, h), bgPaint);
+
+    final Paint bladderPaint = Paint()..color = const Color(0xFF4A90E2).withOpacity(0.6);
+    final Path bladderPath = Path()
+      ..moveTo(w * 0.3, h * 0.1)
+      ..quadraticBezierTo(w * 0.1, h * 0.3, w * 0.3, h * 0.5)
+      ..quadraticBezierTo(w * 0.5, h * 0.5, w * 0.5, h * 0.3)
+      ..quadraticBezierTo(w * 0.5, h * 0.1, w * 0.3, h * 0.1);
+    canvas.drawPath(bladderPath, bladderPaint);
+    _drawLabel(canvas, "Vejiga", w * 0.35, h * 0.25, const Color(0xFF4A90E2));
+
+    final Paint rectumPaint = Paint()..color = const Color(0xFF8B4513).withOpacity(0.6);
+    final Path rectumPath = Path()
+      ..moveTo(w * 0.7, h * 0.4)
+      ..quadraticBezierTo(w * 0.9, h * 0.6, w * 0.8, h * 0.9)
+      ..lineTo(w * 0.6, h * 0.9)
+      ..quadraticBezierTo(w * 0.7, h * 0.6, w * 0.5, h * 0.4);
+    canvas.drawPath(rectumPath, rectumPaint);
+    _drawLabel(canvas, "Recto", w * 0.75, h * 0.7, const Color(0xFF8B4513));
+
+    final Paint pcPaint = Paint()
+      ..color = isContracting ? const Color(0xFF00E676) : const Color(0xFFD0021B)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = isContracting ? 8 : 4;
+    
+    final Path pcPath = Path()
+      ..moveTo(w * 0.3, h * 0.5)
+      ..quadraticBezierTo(w * 0.5, h * 0.65, w * 0.7, h * 0.4);
+    
+    canvas.drawPath(pcPath, pcPaint);
+    _drawLabel(canvas, "Músculo PC", w * 0.5, h * 0.55, isContracting ? const Color(0xFF00E676) : const Color(0xFFD0021B));
+
+    final Paint prostatePaint = Paint()..color = const Color(0xFFFF9800).withOpacity(0.7);
+    canvas.drawCircle(Offset(w * 0.45, h * 0.55), w * 0.08, prostatePaint);
+    _drawLabel(canvas, "Próstata", w * 0.45, h * 0.65, const Color(0xFFFF9800));
+  }
+
+  void _drawLabel(Canvas canvas, String text, double x, double y, Color color) {
+    final TextPainter textPainter = TextPainter(
+      text: TextSpan(text: text, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    textPainter.paint(canvas, Offset(x - textPainter.width / 2, y));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
