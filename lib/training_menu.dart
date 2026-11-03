@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'user_model.dart';
 import 'pelvic_screen.dart';
+import 'ppg_calibration_screen.dart';
 
 class TrainingMenu extends StatelessWidget {
   final Isar isar;
@@ -80,6 +81,37 @@ class TrainingMenu extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // BOTÓN DE CALIBRACIÓN DE PULSO
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF00E676), Color(0xFF00C853)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [BoxShadow(color: const Color(0xFF00E676).withOpacity(0.4), blurRadius: 10, spreadRadius: 2)],
+              ),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => PPGCalibrationScreen(isar: isar, user: user)));
+                },
+                icon: const Icon(Icons.fingerprint, size: 30),
+                label: const Text(
+                  'CALIBRAR PULSO',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
               ),
             ),
             const SizedBox(height: 30),
