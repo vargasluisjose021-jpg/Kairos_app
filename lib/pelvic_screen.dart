@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:isar/isar.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import 'dart:async';
 import 'dart:math';
 import 'user_model.dart';
@@ -18,13 +19,13 @@ class PelvicScreen extends StatefulWidget {
 class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMixin {
   late AnimationController _animController;
   Timer? _timer;
-  Timer? _accelTimer;
+  StreamSubscription<AccelerometerEvent>? _accelSubscription;
   int _secondsRemaining = 0;
   bool _isContracting = true; 
   int _repsCompleted = 0;
   final int _targetReps = 10;
   
-  // Telemetría: Acelerómetro
+  // Telemetría: Acelerómetro REAL
   double _lastAccelValue = 0.0;
   List<double> _movementHistory = [];
   bool _movementDetected = false;
@@ -34,24 +35,27 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
   void initState() {
     super.initState();
     _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
-    _startAccelerometer();
+    _startRealAccelerometer();
     _startExercise();
   }
 
-  void _startAccelerometer() {
-    // Simular lectura del acelerómetro (en producción usaríamos sensors_plus)
-    _accelTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      // Generar valores simulados de movimiento (en producción: leer sensores reales)
-      double simulatedMovement = Random().nextDouble() * 0.5;
+  void _startRealAccelerometer() {
+    // Leer el acelerómetro REAL del celular
+    _accelSubscription = accelerometerEventStream().listen((AccelerometerEvent event) {
+      // Calcular la magnitud del vector de aceleración
+      double magnitude = sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
+      
+      // Normalizar (la gravedad es ~9.8, restamos para ver solo el movimiento)
+      double movement = (magnitude - 9.8).abs();
       
       setState(() {
-        _lastAccelValue = simulatedMovement;
-        _movementHistory.add(simulatedMovement);
+        _lastAccelValue = movement;
+        _movementHistory.add(movement);
         if (_movementHistory.length > 50) _movementHistory.removeAt(0);
         
-        // Detectar si hay movimiento significativo
+        // Detectar si hay movimiento significativo (umbral: 0.5 m/s²)
         double avgMovement = _movementHistory.reduce((a, b) => a + b) / _movementHistory.length;
-        _movementDetected = avgMovement > 0.1;
+        _movementDetected = avgMovement > 0.5;
         if (_movementDetected) _movementCount++;
       });
     });
@@ -92,18 +96,18 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
   @override
   void dispose() {
     _timer?.cancel();
-    _accelTimer?.cancel();
+    _accelSubscription?.cancel();
     _animController.dispose();
     super.dispose();
   }
 
   Future<void> _finishSession() async {
     _timer?.cancel();
-    _accelTimer?.cancel();
+    _accelSubscription?.cancel();
     HapticFeedback.heavyImpact();
     
-    // Validar si la sesión fue real
-    bool sessionValid = _movementCount > 50; // Al menos 50 detecciones de movimiento
+    // Validar si la sesión fue real (al menos 50 detecciones de movimiento)
+    bool sessionValid = _movementCount > 50;
     
     // Actualizar base de datos
     widget.user.totalSessions++;
@@ -112,7 +116,7 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
       widget.user.streakDays++;
     }
     widget.user.lastSessionDate = DateTime.now();
-    widget.user.lastSessionHeartRatePeak = 85 + (_repsCompleted * 2); // Simulado
+    widget.user.lastSessionHeartRatePeak = 85 + (_repsCompleted * 2); // Simulado por ahora
     widget.user.lastSessionMovementDetected = sessionValid;
     widget.user.updatedAt = DateTime.now();
     
@@ -145,7 +149,7 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
         backgroundColor: const Color(0xFF0F0F1A),
         title: const Text('Módulo 1: Suelo Pélvico', style: TextStyle(color: Colors.white)),
         actions: [
-          // Indicador de telemetría
+          // Indicador de telemetría REAL
           Container(
             margin: const EdgeInsets.only(right: 10),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -188,7 +192,7 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
             ),
             const SizedBox(height: 20),
 
-            // ESPEJO DE DATOS: Onda de Movimiento
+            // ESPEJO DE DATOS: Onda de Movimiento REAL
             Container(
               height: 60,
               width: double.infinity,
@@ -259,7 +263,7 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
   }
 }
 
-// Painter para la onda de movimiento
+// Painter para la onda de movimiento REAL
 class MovementWavePainter extends CustomPainter {
   final List<double> movementHistory;
   final Color color;
@@ -281,7 +285,8 @@ class MovementWavePainter extends CustomPainter {
     
     for (int i = 0; i < movementHistory.length; i++) {
       double x = i * xStep;
-      double y = size.height - (movementHistory[i] * size.height);
+      // Escalar el movimiento para que se vea bien en la pantalla
+      double y = size.height - (movementHistory[i] * size.height * 2).clamp(0.0, size.height);
       
       if (i == 0) {
         path.moveTo(x, y);
