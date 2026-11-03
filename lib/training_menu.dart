@@ -44,7 +44,7 @@ class TrainingMenu extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildStat('Nivel', user.userLevel == 1 ? 'Principiante' : user.userLevel == 2 ? 'Intermedio' : 'Avanzado'),
+                      _buildStat('Nivel M1', 'Nivel ${user.module1CurrentLevel}'),
                       _buildStat('Racha', '${user.streakDays} días'),
                       _buildStat('Sesiones', '${user.successfulSessions}/${user.totalSessions}'),
                     ],
@@ -54,7 +54,7 @@ class TrainingMenu extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Tarjeta de Telemetría (Anti-Trampas)
+            // Tarjeta de Telemetría
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(15),
@@ -118,55 +118,59 @@ class TrainingMenu extends StatelessWidget {
 
             const Text('Tu Ruta al Control Total', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
             const SizedBox(height: 5),
-            const Text('Completa cada módulo para desbloquear el siguiente', style: TextStyle(fontSize: 14, color: Colors.white70)),
+            const Text('Completa 7 sesiones por módulo para avanzar', style: TextStyle(fontSize: 14, color: Colors.white70)),
             const SizedBox(height: 20),
 
-            // MÓDULO 1: Suelo Pélvico (Desbloqueado)
+            // MÓDULO 1: Suelo Pélvico
             _buildModuleCard(
               context,
               number: '01',
               title: 'Fundación: Suelo Pélvico',
               desc: 'Kegel y Kegel Inverso. Aísla el músculo PC.',
               color: const Color(0xFF4A90E2),
-              isLocked: false,
+              isLocked: !user.isModuleUnlocked(1),
+              sessionsCompleted: user.module1SessionsCompleted,
               onTap: () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => PelvicScreen(isar: isar, user: user)));
               },
             ),
             const SizedBox(height: 15),
 
-            // MÓDULO 2: Start-Stop (Bloqueado)
+            // MÓDULO 2: Start-Stop
             _buildModuleCard(
               context,
               number: '02',
               title: 'Conciencia: Start-Stop',
               desc: 'Detecta tu Punto de No Retorno (nivel 7).',
               color: Colors.grey[700]!,
-              isLocked: user.currentModule < 2,
+              isLocked: !user.isModuleUnlocked(2),
+              sessionsCompleted: user.module2SessionsCompleted,
               onTap: () {},
             ),
             const SizedBox(height: 15),
 
-            // MÓDULO 3: Edging (Bloqueado)
+            // MÓDULO 3: Edging
             _buildModuleCard(
               context,
               number: '03',
               title: 'Resistencia: Edging',
               desc: 'Domina la meseta de alta excitación.',
               color: Colors.grey[700]!,
-              isLocked: user.currentModule < 3,
+              isLocked: !user.isModuleUnlocked(3),
+              sessionsCompleted: user.module3SessionsCompleted,
               onTap: () {},
             ),
             const SizedBox(height: 15),
 
-            // MÓDULO 4: Control Total (Bloqueado)
+            // MÓDULO 4: Control Total
             _buildModuleCard(
               context,
               number: '04',
               title: 'Control Total: Squeeze & Breath',
               desc: 'Hackea el reflejo eyaculatorio.',
               color: Colors.grey[700]!,
-              isLocked: user.currentModule < 4,
+              isLocked: !user.isModuleUnlocked(4),
+              sessionsCompleted: user.module4SessionsCompleted,
               onTap: () {},
             ),
           ],
@@ -192,8 +196,12 @@ class TrainingMenu extends StatelessWidget {
     required String desc,
     required Color color,
     required bool isLocked,
+    required int sessionsCompleted,
     required VoidCallback onTap,
   }) {
+    final int target = 7;
+    final double progress = sessionsCompleted / target;
+    
     return GestureDetector(
       onTap: isLocked ? null : onTap,
       child: Container(
@@ -214,6 +222,17 @@ class TrainingMenu extends StatelessWidget {
                   Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isLocked ? Colors.grey[600] : Colors.white)),
                   const SizedBox(height: 5),
                   Text(desc, style: TextStyle(fontSize: 13, color: isLocked ? Colors.grey[700] : Colors.white70)),
+                  if (!isLocked) ...[
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: progress.clamp(0.0, 1.0),
+                      backgroundColor: Colors.grey[800],
+                      color: color,
+                      minHeight: 6,
+                    ),
+                    const SizedBox(height: 4),
+                    Text('Progreso: $sessionsCompleted/$target sesiones', style: TextStyle(fontSize: 11, color: color)),
+                  ]
                 ],
               ),
             ),
