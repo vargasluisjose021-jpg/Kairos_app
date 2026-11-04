@@ -7,8 +7,8 @@ class User {
   Id id = Isar.autoIncrement;
   
   // Datos del Onboarding
-  String gender = '';
-  int age = 25;
+  String gender = 'male'; // App exclusiva para hombres
+  int age = 25; 
   String frequency = '';
   List<String> devices = [];
   double controlLevel = 5.0;
@@ -16,6 +16,13 @@ class User {
   
   DateTime createdAt = DateTime.now();
   DateTime? updatedAt;
+
+  // --- CLASIFICACIÓN CLÍNICA POR EDAD ---
+  String ageGroup = 'adult'; // young, adult, mature, senior
+  int kegelHoldTime = 5; // Segundos de contracción
+  int kegelReps = 10; // Número de repeticiones
+  bool allowEdging = true; // Bloqueado para <18 y >65
+  String clinicalWarning = ''; // Advertencia médica si aplica
 
   // --- PROGRESO POR MÓDULO ---
   int module1SessionsCompleted = 0;
@@ -44,14 +51,51 @@ class User {
   int lastSessionHeartRatePeak = 0;
   bool lastSessionMovementDetected = false;
 
-  // --- MÉTODOS ---
+  // --- MÉTODOS CLÍNICOS ---
+  
+  // Configura los parámetros de entrenamiento según la edad
+  void configureByAge(int userAge) {
+    age = userAge;
+    
+    if (userAge < 18) {
+      ageGroup = 'young';
+      kegelHoldTime = 3;
+      kegelReps = 6;
+      allowEdging = false; // Bloqueado por seguridad
+      clinicalWarning = 'Sistema nervioso en desarrollo. Ejercicios suaves. No hacer Edging.';
+    } else if (userAge <= 30) {
+      ageGroup = 'young_adult';
+      kegelHoldTime = 5;
+      kegelReps = 10;
+      allowEdging = true;
+      clinicalWarning = '';
+    } else if (userAge <= 50) {
+      ageGroup = 'adult';
+      kegelHoldTime = 8;
+      kegelReps = 12;
+      allowEdging = true;
+      clinicalWarning = '';
+    } else if (userAge <= 65) {
+      ageGroup = 'mature';
+      kegelHoldTime = 6;
+      kegelReps = 10;
+      allowEdging = true;
+      clinicalWarning = 'Enfoque en relajación pélvica. Calentamiento obligatorio.';
+    } else {
+      ageGroup = 'senior';
+      kegelHoldTime = 4;
+      kegelReps = 8;
+      allowEdging = false; // Riesgo de congestión prostática
+      clinicalWarning = '⚠️ Consulte a su urólogo antes de iniciar. Evite el Edging.';
+    }
+    updatedAt = DateTime.now();
+  }
+
+  // --- MÉTODOS DE PROGRESIÓN ---
   
   bool isModuleUnlocked(int moduleNumber) {
-    if (moduleNumber == 1) return true;
-    if (moduleNumber == 2) return module1SessionsCompleted >= 7;
-    if (moduleNumber == 3) return module2SessionsCompleted >= 7;
-    if (moduleNumber == 4) return module3SessionsCompleted >= 7;
-    return false;
+    // Todos los módulos desbloqueados desde el inicio para entrenamiento integral diario
+    return true; 
   }
 
   void registerSuccessfulSession(int moduleNumber) {
