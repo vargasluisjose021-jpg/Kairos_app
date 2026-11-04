@@ -22,7 +22,10 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
   int _secondsRemaining = 0;
   bool _isContracting = true; 
   int _repsCompleted = 0;
-  final int _targetReps = 10;
+  
+  // Variables clínicas dinámicas basadas en la edad del usuario
+  late int _holdTime;
+  late int _targetReps;
   
   double _lastAccelValue = 0.0;
   List<double> _movementHistory = [];
@@ -33,6 +36,11 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
   void initState() {
     super.initState();
     _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    
+    // Cargar la prescripción clínica personalizada
+    _holdTime = widget.user.kegelHoldTime;
+    _targetReps = widget.user.kegelReps;
+    
     _startRealAccelerometer();
     _startExercise();
   }
@@ -56,7 +64,7 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
 
   void _startExercise() {
     _isContracting = true;
-    _secondsRemaining = 5; 
+    _secondsRemaining = _holdTime; 
     _repsCompleted = 0;
     
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -72,7 +80,7 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
   void _switchPhase() {
     if (_isContracting) {
       _isContracting = false;
-      _secondsRemaining = 5;
+      _secondsRemaining = _holdTime; // Tiempo de relajación igual al de contracción
       HapticFeedback.lightImpact();
     } else {
       _repsCompleted++;
@@ -81,7 +89,7 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
         return;
       }
       _isContracting = true;
-      _secondsRemaining = 5;
+      _secondsRemaining = _holdTime;
       HapticFeedback.mediumImpact();
     }
   }
@@ -102,7 +110,7 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
             style: TextStyle(color: Colors.white, fontSize: 18),
           ),
           content: const Text(
-            'Sé honesto contigo mismo. Tu progreso depende de tu sinceridad.',
+            'Sé honesto contigo mismo. Tu progreso clínico depende de tu sinceridad.',
             style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
           actions: [
@@ -139,7 +147,7 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
     if (!mounted) return;
     
     String message = successful 
-        ? '¡Sesión registrada! Nivel ${widget.user.module1CurrentLevel} | ${widget.user.module1SessionsCompleted}/7 sesiones'
+        ? '¡Sesión registrada! Progreso: ${widget.user.module1SessionsCompleted}/7'
         : 'Sesión no completada. Mañana repetimos el mismo nivel.';
     
     ScaffoldMessenger.of(context).showSnackBar(
@@ -195,6 +203,21 @@ class _PelvicScreenState extends State<PelvicScreen> with TickerProviderStateMix
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
+            // Etiqueta de Prescripción Clínica
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00B4D8).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFF00B4D8), width: 1),
+              ),
+              child: Text(
+                'Plan Clínico: ${_holdTime}s de contracción | $_targetReps repeticiones',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF00B4D8), fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 15),
+
             Text('Repetición ${_repsCompleted + 1} de $_targetReps', style: const TextStyle(fontSize: 18, color: Colors.white70)),
             const SizedBox(height: 20),
 
