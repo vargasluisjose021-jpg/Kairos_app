@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'user_model.dart';
+import 'training_menu.dart';
 
 class OnboardingScreen extends StatefulWidget {
   final Isar isar;
-  
   const OnboardingScreen({super.key, required this.isar});
 
   @override
@@ -13,70 +13,44 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentStep = 0;
-  String _gender = '';
-  int _age = 25;
-  String _frequency = '';
-  List<String> _devices = [];
-  double _controlLevel = 5;
-  List<String> _goals = [];
-
-  Future<void> _saveProfile() async {
-    final user = User()
-      ..gender = _gender
-      ..age = _age
-      ..frequency = _frequency
-      ..devices = _devices
-      ..controlLevel = _controlLevel
-      ..goals = _goals
-      ..createdAt = DateTime.now()
-      ..updatedAt = DateTime.now();
-    
-    await widget.isar.writeTxn(() => widget.isar.users.put(user));
-  }
+  int _selectedAge = 25;
+  String _selectedFrequency = 'Ocasional';
+  final List<String> _frequencies = ['Ocasional', '1-2 veces por semana', '3+ veces por semana'];
 
   void _nextStep() {
-    if (_currentStep == 0 && _gender.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor selecciona tu género')),
-      );
-      return;
-    }
-    if (_currentStep == 2 && _frequency.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor selecciona una frecuencia')),
-      );
-      return;
-    }
-    if (_currentStep == 5 && _goals.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor elige al menos un objetivo')),
-      );
-      return;
-    }
-
-    if (_currentStep < 5) {
+    if (_currentStep < 2) {
       setState(() => _currentStep++);
     } else {
-      _saveProfile().then((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Perfil guardado exitosamente')),
-        );
-        Navigator.pop(context);
-      });
+      _completeOnboarding();
     }
   }
 
-  void _prevStep() {
-    if (_currentStep > 0) setState(() => _currentStep--);
+  Future<void> _completeOnboarding() async {
+    final user = User()
+      ..gender = 'male'
+      ..age = _selectedAge
+      ..frequency = _selectedFrequency;
+    
+    // Aplicar configuración clínica basada en la edad
+    user.configureByAge(_selectedAge);
+
+    await widget.isar.writeTxn(() => widget.isar.users.put(user));
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => TrainingMenu(isar: widget.isar, user: user)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: const Color(0xFF0A1929),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F0F1A),
-        title: const Text('Kairos: Perfil', style: TextStyle(color: Colors.white)),
+        backgroundColor: const Color(0xFF0A1929),
+        title: const Text('Evaluación Clínica Inicial', style: TextStyle(color: Colors.white)),
         elevation: 0,
       ),
       body: Padding(
@@ -84,187 +58,212 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            LinearProgressIndicator(
-              value: (_currentStep + 1) / 6,
-              backgroundColor: Colors.grey[800],
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFE94560)),
+            // Indicador de progreso
+            Row(
+              children: List.generate(3, (index) {
+                return Expanded(
+                  child: Container(
+                    height: 4,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    color: index <= _currentStep ? const Color(0xFF00B4D8) : Colors.grey[800],
+                  ),
+                );
+              }),
             ),
             const SizedBox(height: 40),
-            Expanded(
-              child: _buildStepContent(),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (_currentStep > 0)
-                  TextButton(
-                    onPressed: _prevStep,
-                    child: const Text('Atrás', style: TextStyle(color: Colors.white70)),
-                  )
-                else
-                  const SizedBox(),
-                ElevatedButton(
-                  onPressed: _nextStep,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE94560),
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                  ),
-                  child: Text(_currentStep == 5 ? 'Finalizar' : 'Siguiente'),
+
+            // PASO 1: Edad
+            if (_currentStep == 0) ...[
+              const Text(
+                '¿Cuál es tu edad?',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Esta información es crucial para ajustar los tiempos y la intensidad de los ejercicios a tu fisiología.',
+                style: TextStyle(fontSize: 16, color: Colors.white70),
+              ),
+              const SizedBox(height: 30),
+              
+              // Selector de edad
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: const Color(0xFF00B4D8), width: 2),
                 ),
-              ],
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove, color: Color(0xFF00B4D8), size: 32),
+                          onPressed: () {
+                            if (_selectedAge > 14) setState(() => _selectedAge--);
+                          },
+                        ),
+                        Text(
+                          '$_selectedAge años',
+                          style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add, color: Color(0xFF00B4D8), size: 32),
+                          onPressed: () {
+                            if (_selectedAge < 100) setState(() => _selectedAge++);
+                          },
+                        ),
+                      ],
+                    ),
+                    if (_selectedAge < 18) ...[
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.all(15),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.orange, width: 1),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Aviso clínico: Tu sistema nervioso aún se está desarrollando. Los ejercicios se ajustarán a un nivel suave y seguro. No se incluirán técnicas de alta intensidad.',
+                                style: TextStyle(color: Colors.orange, fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (_selectedAge > 60) ...[
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.all(15),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.orange, width: 1),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Aviso clínico: Se recomienda priorizar la relajación pélvica. Si tienes antecedentes de prostatitis o cirugía, consulta a tu urólogo antes de iniciar.',
+                                style: TextStyle(color: Colors.orange, fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+
+            // PASO 2: Frecuencia actual
+            if (_currentStep == 1) ...[
+              const Text(
+                '¿Con qué frecuencia tienes actividad sexual o masturbación?',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Esto nos ayuda a establecer una línea base para tu entrenamiento.',
+                style: TextStyle(fontSize: 16, color: Colors.white70),
+              ),
+              const SizedBox(height: 30),
+              
+              Column(
+                children: _frequencies.map((freq) {
+                  final isSelected = _selectedFrequency == freq;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedFrequency = freq),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 15),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFF00B4D8).withOpacity(0.2) : Colors.grey[900],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected ? const Color(0xFF00B4D8) : Colors.grey[800]!,
+                          width: 2,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                            color: isSelected ? const Color(0xFF00B4D8) : Colors.grey[600],
+                          ),
+                          const SizedBox(width: 15),
+                          Text(freq, style: const TextStyle(fontSize: 18, color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+
+            // PASO 3: Consentimiento y Inicio
+            if (_currentStep == 2) ...[
+              const Text(
+                'Consentimiento y Seguridad',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: Colors.grey[800]!, width: 1),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Al continuar, confirmas que:',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      '• Eres mayor de 14 años.\n• Entiendes que esta app es una herramienta de entrenamiento y no sustituye el diagnóstico o tratamiento de un urólogo o fisioterapeuta.\n• Si experimentas dolor pélvico, detén los ejercicios y consulta a un médico.',
+                      style: TextStyle(fontSize: 14, color: Colors.white70, height: 1.5),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            const Spacer(),
+
+            // Botón de acción
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _nextStep,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00B4D8),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text(
+                  _currentStep == 2 ? 'Comenzar Entrenamiento Clínico' : 'Continuar',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildStepContent() {
-    switch (_currentStep) {
-      case 0: return _buildGenderStep();
-      case 1: return _buildAgeStep();
-      case 2: return _buildFrequencyStep();
-      case 3: return _buildDevicesStep();
-      case 4: return _buildControlStep();
-      case 5: return _buildGoalStep();
-      default: return const SizedBox();
-    }
-  }
-
-  Widget _buildGenderStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('¿Cuál es tu género?', style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 24),
-        _buildOptionButton('Hombre', _gender == 'Hombre', () => setState(() => _gender = 'Hombre')),
-        const SizedBox(height: 12),
-        _buildOptionButton('Mujer', _gender == 'Mujer', () => setState(() => _gender = 'Mujer')),
-        const SizedBox(height: 12),
-        _buildOptionButton('Otro', _gender == 'Otro', () => setState(() => _gender = 'Otro')),
-      ],
-    );
-  }
-
-  Widget _buildAgeStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('¿Cuál es tu edad?', style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 24),
-        Slider(
-          value: _age.toDouble(),
-          min: 18,
-          max: 80,
-          divisions: 62,
-          activeColor: const Color(0xFFE94560),
-          inactiveColor: Colors.grey[800],
-          label: '$_age años',
-          onChanged: (val) => setState(() => _age = val.toInt()),
-        ),
-        Center(child: Text('$_age años', style: const TextStyle(fontSize: 48, color: Color(0xFFE94560), fontWeight: FontWeight.bold))),
-      ],
-    );
-  }
-
-  Widget _buildFrequencyStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('¿Con qué frecuencia practicas edging?', style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 24),
-        _buildOptionButton('Nunca', _frequency == 'Nunca', () => setState(() => _frequency = 'Nunca')),
-        const SizedBox(height: 12),
-        _buildOptionButton('1-2 veces por semana', _frequency == '1-2 veces', () => setState(() => _frequency = '1-2 veces')),
-        const SizedBox(height: 12),
-        _buildOptionButton('3+ veces por semana', _frequency == '3+ veces', () => setState(() => _frequency = '3+ veces')),
-      ],
-    );
-  }
-
-  Widget _buildDevicesStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('¿Qué dispositivos usas?', style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 24),
-        _buildCheckboxOption('Apple Watch', 'Apple Watch'),
-        _buildCheckboxOption('Garmin', 'Garmin'),
-        _buildCheckboxOption('Oura Ring', 'Oura Ring'),
-        _buildCheckboxOption('Ninguno', 'Ninguno'),
-      ],
-    );
-  }
-
-  Widget _buildControlStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('¿Qué nivel de control sientes que tienes hoy? (1-10)', style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 24),
-        Slider(
-          value: _controlLevel,
-          min: 1,
-          max: 10,
-          divisions: 9,
-          activeColor: const Color(0xFFE94560),
-          inactiveColor: Colors.grey[800],
-          label: '${_controlLevel.toInt()}',
-          onChanged: (val) => setState(() => _controlLevel = val),
-        ),
-        Center(child: Text('${_controlLevel.toInt()} / 10', style: const TextStyle(fontSize: 48, color: Color(0xFFE94560), fontWeight: FontWeight.bold))),
-      ],
-    );
-  }
-
-  Widget _buildGoalStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('¿Cuál es tu objetivo principal?', style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        const Text('Puedes elegir varias opciones', style: TextStyle(fontSize: 14, color: Colors.white54)),
-        const SizedBox(height: 24),
-        _buildCheckboxOption('Aumentar duración', 'Duración'),
-        _buildCheckboxOption('Mejor control corporal', 'Control'),
-        _buildCheckboxOption('Conocimiento y datos', 'Datos'),
-      ],
-    );
-  }
-
-  Widget _buildOptionButton(String text, bool isSelected, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFE94560) : const Color(0xFF1A1A2E),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? const Color(0xFFE94560) : Colors.grey[800]!),
-        ),
-        child: Text(text, style: TextStyle(fontSize: 18, color: isSelected ? Colors.white : Colors.white70, fontWeight: FontWeight.w500)),
-      ),
-    );
-  }
-
-  Widget _buildCheckboxOption(String text, String value) {
-    return CheckboxListTile(
-      title: Text(text, style: const TextStyle(color: Colors.white)),
-      value: _devices.contains(value) || _goals.contains(value),
-      activeColor: const Color(0xFFE94560),
-      checkColor: Colors.white,
-      onChanged: (bool? selected) {
-        setState(() {
-          if (selected == true) {
-            if (!_devices.contains(value)) _devices.add(value);
-            if (!_goals.contains(value)) _goals.add(value);
-          } else {
-            _devices.remove(value);
-            _goals.remove(value);
-          }
-        });
-      },
     );
   }
 }
