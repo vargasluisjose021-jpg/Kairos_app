@@ -24,11 +24,12 @@ class User {
   bool allowEdging = true;
   String clinicalWarning = '';
 
-  // --- TEST MELT (Línea Base) ---
-  int baselineMeltSeconds = 0; // Tiempo real medido hasta la eyaculación
-  int trainingRhythmSeconds = 45; // Tiempo de estimulación calculado (ej. 50-60% del MELT)
-  bool hasCompletedBaseline = false;
-  DateTime? lastBaselineDate;
+  // --- PRUEBA DE LÍNEA BASE (MELT) ---
+  int baselineMeltSeconds = 0; 
+  int baselineHeartRatePeak = 0; 
+  int trainingRhythmStimulateSeconds = 30; 
+  int trainingRhythmRestSeconds = 30; 
+  DateTime? lastBaselineTestDate;
 
   // --- PROGRESO POR MÓDULO ---
   int module1SessionsCompleted = 0;
@@ -54,7 +55,6 @@ class User {
   DateTime? lastSessionDate;
   
   // --- TELEMETRÍA ---
-  int restingHeartRate = 65; // BPM en reposo (para comparar el pico)
   int lastSessionHeartRatePeak = 0;
   bool lastSessionMovementDetected = false;
 
@@ -96,23 +96,26 @@ class User {
     updatedAt = DateTime.now();
   }
 
-  // Calcula el ritmo de entrenamiento basado en el MELT real
-  void calculateTrainingRhythm(int meltSeconds, int peakBpm) {
+  void calculateTrainingRhythm(int meltSeconds, int heartRatePeak) {
     baselineMeltSeconds = meltSeconds;
-    restingHeartRate = peakBpm - 30; // Estimación simple del reposo si no se midió antes
-    
-    // Regla clínica: El tiempo de entrenamiento inicial debe ser el 50-60% del MELT real
-    // para garantizar el éxito y evitar la frustración, con un mínimo de 30s y máximo de 120s.
-    int calculatedRhythm = (meltSeconds * 0.6).round();
-    trainingRhythmSeconds = calculatedRhythm.clamp(30, 120);
-    
-    hasCompletedBaseline = true;
-    lastBaselineDate = DateTime.now();
+    baselineHeartRatePeak = heartRatePeak;
+    lastBaselineTestDate = DateTime.now();
+
+    if (meltSeconds < 60) {
+      trainingRhythmStimulateSeconds = 30;
+      trainingRhythmRestSeconds = 30;
+    } else if (meltSeconds < 180) {
+      trainingRhythmStimulateSeconds = (meltSeconds * 0.5).round();
+      trainingRhythmRestSeconds = 30;
+    } else {
+      trainingRhythmStimulateSeconds = 90;
+      trainingRhythmRestSeconds = 45;
+    }
     updatedAt = DateTime.now();
   }
 
   bool isModuleUnlocked(int moduleNumber) {
-    return true; // Todos desbloqueados para rutina integral diaria
+    return true; 
   }
 
   void registerSuccessfulSession(int moduleNumber) {
@@ -151,7 +154,7 @@ class User {
     final difference = now.difference(lastSessionDate!).inDays;
     
     if (difference == 0) {
-      // Mismo día
+      // Mismo día, no cambia
     } else if (difference == 1) {
       streakDays++;
     } else {
