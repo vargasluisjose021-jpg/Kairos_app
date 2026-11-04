@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'user_model.dart';
 import 'pelvic_screen.dart';
+import 'start_stop_screen.dart';
+import 'baseline_test_screen.dart';
 import 'ppg_calibration_screen.dart';
 
 class TrainingMenu extends StatelessWidget {
@@ -92,6 +94,46 @@ class TrainingMenu extends StatelessWidget {
               const SizedBox(height: 15),
             ],
 
+            // BOTÓN GIGANTE: PRUEBA DE LÍNEA BASE (MELT)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFE94560), Color(0xFF8B0000)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [BoxShadow(color: const Color(0xFFE94560).withOpacity(0.4), blurRadius: 15, spreadRadius: 2)],
+              ),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => BaselineTestScreen(isar: isar, user: user)));
+                },
+                icon: const Icon(Icons.bolt, size: 30),
+                label: const Text(
+                  'PRUEBA DE LÍNEA BASE (MELT)',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Center(
+              child: Text(
+                user.baselineMeltSeconds > 0 
+                    ? 'Tu ritmo actual: ${user.trainingRhythmStimulateSeconds}s ON / ${user.trainingRhythmRestSeconds}s OFF' 
+                    : 'Realiza la prueba para calcular tu ritmo personalizado',
+                style: TextStyle(fontSize: 12, color: user.baselineMeltSeconds > 0 ? const Color(0xFF00E676) : Colors.white54),
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // Tarjeta de Telemetría
             Container(
               width: double.infinity,
@@ -121,37 +163,6 @@ class TrainingMenu extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-
-            // BOTÓN DE CALIBRACIÓN DE PULSO
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF00E676), Color(0xFF00C853)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [BoxShadow(color: const Color(0xFF00E676).withOpacity(0.4), blurRadius: 10, spreadRadius: 2)],
-              ),
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => PPGCalibrationScreen(isar: isar, user: user)));
-                },
-                icon: const Icon(Icons.fingerprint, size: 30),
-                label: const Text(
-                  'CALIBRAR PULSO',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
             const SizedBox(height: 30),
 
             const Text('Tu Rutina Diaria', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
@@ -171,12 +182,7 @@ class TrainingMenu extends StatelessWidget {
               sessionsCompleted: user.module1SessionsCompleted,
               onTap: () {
                 if (module1CompletedToday) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Ya completaste este módulo hoy. ¡Vuelve mañana!'),
-                      backgroundColor: Color(0xFFFF9800),
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ya completaste este módulo hoy. ¡Vuelve mañana!'), backgroundColor: Color(0xFFFF9800)));
                 } else {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => PelvicScreen(isar: isar, user: user)));
                 }
@@ -190,33 +196,17 @@ class TrainingMenu extends StatelessWidget {
               number: '02',
               title: 'Conciencia: Start-Stop',
               desc: 'Detecta tu Punto de No Retorno (nivel 7).',
-              prescription: user.allowEdging ? 'Habilitado' : '⚠️ Bloqueado por edad',
+              prescription: user.allowEdging ? '${user.trainingRhythmStimulateSeconds}s ON / ${user.trainingRhythmRestSeconds}s OFF' : '⚠️ Bloqueado por edad',
               color: const Color(0xFF9C27B0),
               isCompletedToday: module2CompletedToday,
               sessionsCompleted: user.module2SessionsCompleted,
               onTap: () {
                 if (module2CompletedToday) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Ya completaste este módulo hoy. ¡Vuelve mañana!'),
-                      backgroundColor: Color(0xFFFF9800),
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ya completaste este módulo hoy. ¡Vuelve mañana!'), backgroundColor: Color(0xFFFF9800)));
                 } else if (!user.allowEdging) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Este módulo está bloqueado por razones clínicas. Consulta tu plan de entrenamiento.'),
-                      backgroundColor: Color(0xFFFF9800),
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Este módulo está bloqueado por razones clínicas.'), backgroundColor: Color(0xFFFF9800)));
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Módulo 2 en construcción. Próximamente.'),
-                      backgroundColor: Color(0xFF00B4D8),
-                    ),
-                  );
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => StartStopScreen(isar: isar, user: user)));
                 }
               },
             ),
@@ -234,27 +224,11 @@ class TrainingMenu extends StatelessWidget {
               sessionsCompleted: user.module3SessionsCompleted,
               onTap: () {
                 if (module3CompletedToday) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Ya completaste este módulo hoy. ¡Vuelve mañana!'),
-                      backgroundColor: Color(0xFFFF9800),
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ya completaste este módulo hoy. ¡Vuelve mañana!'), backgroundColor: Color(0xFFFF9800)));
                 } else if (!user.allowEdging) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Este módulo está bloqueado por razones clínicas. Consulta tu plan de entrenamiento.'),
-                      backgroundColor: Color(0xFFFF9800),
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Este módulo está bloqueado por razones clínicas.'), backgroundColor: Color(0xFFFF9800)));
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Módulo 3 en construcción. Próximamente.'),
-                      backgroundColor: Color(0xFF00B4D8),
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Módulo 3 en construcción. Próximamente.'), backgroundColor: Color(0xFF00B4D8)));
                 }
               },
             ),
@@ -272,27 +246,11 @@ class TrainingMenu extends StatelessWidget {
               sessionsCompleted: user.module4SessionsCompleted,
               onTap: () {
                 if (module4CompletedToday) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Ya completaste este módulo hoy. ¡Vuelve mañana!'),
-                      backgroundColor: Color(0xFFFF9800),
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ya completaste este módulo hoy. ¡Vuelve mañana!'), backgroundColor: Color(0xFFFF9800)));
                 } else if (!user.allowEdging) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Este módulo está bloqueado por razones clínicas. Consulta tu plan de entrenamiento.'),
-                      backgroundColor: Color(0xFFFF9800),
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Este módulo está bloqueado por razones clínicas.'), backgroundColor: Color(0xFFFF9800)));
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Módulo 4 en construcción. Próximamente.'),
-                      backgroundColor: Color(0xFF00B4D8),
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Módulo 4 en construcción. Próximamente.'), backgroundColor: Color(0xFF00B4D8)));
                 }
               },
             ),
@@ -342,14 +300,10 @@ class TrainingMenu extends StatelessWidget {
                 Text(number, style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color)),
                 if (isCompletedToday)
                   Positioned(
-                    top: -5,
-                    right: -5,
+                    top: -5, right: -5,
                     child: Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                      ),
+                      decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
                       child: const Icon(Icons.check, color: Colors.white, size: 14),
                     ),
                   ),
@@ -366,22 +320,11 @@ class TrainingMenu extends StatelessWidget {
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      prescription,
-                      style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold),
-                    ),
+                    decoration: BoxDecoration(color: color.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                    child: Text(prescription, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: progress.clamp(0.0, 1.0),
-                    backgroundColor: Colors.grey[800],
-                    color: color,
-                    minHeight: 6,
-                  ),
+                  LinearProgressIndicator(value: progress.clamp(0.0, 1.0), backgroundColor: Colors.grey[800], color: color, minHeight: 6),
                   const SizedBox(height: 4),
                   Text(
                     isCompletedToday ? '✓ Completado hoy' : 'Progreso: $sessionsCompleted/$target sesiones',
@@ -390,8 +333,7 @@ class TrainingMenu extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(isCompletedToday ? Icons.check_circle : Icons.arrow_forward_ios, 
-                 color: isCompletedToday ? Colors.green : color),
+            Icon(isCompletedToday ? Icons.check_circle : Icons.arrow_forward_ios, color: isCompletedToday ? Colors.green : color),
           ],
         ),
       ),
