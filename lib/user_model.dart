@@ -7,7 +7,7 @@ class User {
   Id id = Isar.autoIncrement;
   
   // Datos del Onboarding
-  String gender = 'male'; // App exclusiva para hombres
+  String gender = 'male';
   int age = 25; 
   String frequency = '';
   List<String> devices = [];
@@ -18,11 +18,17 @@ class User {
   DateTime? updatedAt;
 
   // --- CLASIFICACIÓN CLÍNICA POR EDAD ---
-  String ageGroup = 'adult'; // young, adult, mature, senior
-  int kegelHoldTime = 5; // Segundos de contracción
-  int kegelReps = 10; // Número de repeticiones
-  bool allowEdging = true; // Bloqueado para <18 y >65
-  String clinicalWarning = ''; // Advertencia médica si aplica
+  String ageGroup = 'adult';
+  int kegelHoldTime = 5;
+  int kegelReps = 10;
+  bool allowEdging = true;
+  String clinicalWarning = '';
+
+  // --- TEST MELT (Línea Base) ---
+  int baselineMeltSeconds = 0; // Tiempo real medido hasta la eyaculación
+  int trainingRhythmSeconds = 45; // Tiempo de estimulación calculado (ej. 50-60% del MELT)
+  bool hasCompletedBaseline = false;
+  DateTime? lastBaselineDate;
 
   // --- PROGRESO POR MÓDULO ---
   int module1SessionsCompleted = 0;
@@ -48,20 +54,19 @@ class User {
   DateTime? lastSessionDate;
   
   // --- TELEMETRÍA ---
+  int restingHeartRate = 65; // BPM en reposo (para comparar el pico)
   int lastSessionHeartRatePeak = 0;
   bool lastSessionMovementDetected = false;
 
   // --- MÉTODOS CLÍNICOS ---
   
-  // Configura los parámetros de entrenamiento según la edad
   void configureByAge(int userAge) {
     age = userAge;
-    
     if (userAge < 18) {
       ageGroup = 'young';
       kegelHoldTime = 3;
       kegelReps = 6;
-      allowEdging = false; // Bloqueado por seguridad
+      allowEdging = false;
       clinicalWarning = 'Sistema nervioso en desarrollo. Ejercicios suaves. No hacer Edging.';
     } else if (userAge <= 30) {
       ageGroup = 'young_adult';
@@ -85,17 +90,29 @@ class User {
       ageGroup = 'senior';
       kegelHoldTime = 4;
       kegelReps = 8;
-      allowEdging = false; // Riesgo de congestión prostática
+      allowEdging = false;
       clinicalWarning = '⚠️ Consulte a su urólogo antes de iniciar. Evite el Edging.';
     }
     updatedAt = DateTime.now();
   }
 
-  // --- MÉTODOS DE PROGRESIÓN ---
-  
+  // Calcula el ritmo de entrenamiento basado en el MELT real
+  void calculateTrainingRhythm(int meltSeconds, int peakBpm) {
+    baselineMeltSeconds = meltSeconds;
+    restingHeartRate = peakBpm - 30; // Estimación simple del reposo si no se midió antes
+    
+    // Regla clínica: El tiempo de entrenamiento inicial debe ser el 50-60% del MELT real
+    // para garantizar el éxito y evitar la frustración, con un mínimo de 30s y máximo de 120s.
+    int calculatedRhythm = (meltSeconds * 0.6).round();
+    trainingRhythmSeconds = calculatedRhythm.clamp(30, 120);
+    
+    hasCompletedBaseline = true;
+    lastBaselineDate = DateTime.now();
+    updatedAt = DateTime.now();
+  }
+
   bool isModuleUnlocked(int moduleNumber) {
-    // Todos los módulos desbloqueados desde el inicio para entrenamiento integral diario
-    return true; 
+    return true; // Todos desbloqueados para rutina integral diaria
   }
 
   void registerSuccessfulSession(int moduleNumber) {
@@ -134,7 +151,7 @@ class User {
     final difference = now.difference(lastSessionDate!).inDays;
     
     if (difference == 0) {
-      // Mismo día, no cambia
+      // Mismo día
     } else if (difference == 1) {
       streakDays++;
     } else {
