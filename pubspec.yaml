@@ -1,31 +1,26 @@
 name: kairos_app
-description: "Biofeedback & Control - Entrenamiento de suelo pélvico y control eyaculatorio"
+description: "Kairos - Clinical Training App"
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.2.3 <4.0.0'
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.2
   isar: ^3.1.0+1
   isar_flutter_libs: ^3.1.0+1
-  path_provider: ^2.1.1
-  flutter_blue_plus: ^1.31.15
-  sensors_plus: ^6.1.1
   camera: ^0.11.0+2
+  sensors_plus: ^5.0.1
   permission_handler: ^11.3.1
-  image: ^4.2.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
-  build_runner: ^2.4.7
-  isar_generator: ^3.1.0+1
+  flutter_lints: ^4.0.0
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/anatomical_guide.png
