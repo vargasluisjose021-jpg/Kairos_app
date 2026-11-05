@@ -27,12 +27,10 @@ class _StartStopScreenState extends State<StartStopScreen> with TickerProviderSt
   @override
   void initState() {
     super.initState();
-    // CLÍNICO: 400ms para subir, 400ms para bajar (0.8s por ciclo = ~75 movimientos/minuto)
     _barController = AnimationController(
       vsync: this, 
       duration: const Duration(milliseconds: 400), 
     );
-    // Usamos easeInOut para simular la aceleración natural de la mano
     _barAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _barController, curve: Curves.easeInOut)
     );
@@ -56,7 +54,6 @@ class _StartStopScreenState extends State<StartStopScreen> with TickerProviderSt
 
   void _runStartPhase() {
     _timeRemaining = widget.user.trainingRhythmStimulateSeconds;
-    // La barra se repite infinitamente de forma fluida
     _barController.repeat(reverse: true); 
     
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
@@ -221,7 +218,6 @@ class _StartStopScreenState extends State<StartStopScreen> with TickerProviderSt
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(15), border: Border.all(color: mainColor.withOpacity(0.3), width: 2)),
-                  // CLAVE: Usamos AnimatedBuilder para que la animación sea fluida y no salte
                   child: AnimatedBuilder(
                     animation: _barAnimation,
                     builder: (context, child) {
@@ -289,10 +285,10 @@ class _StartStopScreenState extends State<StartStopScreen> with TickerProviderSt
   }
 }
 
-// Ilustración Anatómica Clínica Realista y Movimiento Fluido
+// Ilustración Anatómica Realista con Testículos, Glande y Uretra
 class ClinicalSilhouettePainter extends CustomPainter {
   final bool isStimulating;
-  final double barProgress; // 0.0 (base) a 1.0 (punta)
+  final double barProgress;
   final Color mainColor;
 
   ClinicalSilhouettePainter({required this.isStimulating, required this.barProgress, required this.mainColor});
@@ -306,82 +302,159 @@ class ClinicalSilhouettePainter extends CustomPainter {
     // Fondo clínico
     canvas.drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..color = const Color(0xFF1A1A2E));
 
-    // Colores anatómicos
+    // Colores anatómicos clínicos
     final Color tissueBase = const Color(0xFF4A90E2);
     final Color tissueDark = const Color(0xFF0077B6);
     final Color tissueLight = const Color(0xFF90E0EF);
+    final Color tissueHighlight = const Color(0xFFCAF0F8);
 
-    // 1. CUERPO (Shaft) - Forma orgánica, no recta
-    final Paint shaftPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.centerLeft, end: Alignment.centerRight,
-        colors: [tissueBase.withOpacity(0.3), tissueBase.withOpacity(0.6), tissueBase.withOpacity(0.3)],
-      ).createShader(Rect.fromLTWH(cx - 35, h * 0.3, 70, h * 0.6))
-      ..style = PaintingStyle.fill;
-      
     final Paint outlinePaint = Paint()..color = tissueBase..style = PaintingStyle.stroke..strokeWidth = 2;
 
-    final Path shaft = Path()
-      ..moveTo(cx - 28, h * 0.85) // Base izquierda
-      ..quadraticBezierTo(cx - 32, h * 0.6, cx - 26, h * 0.35) // Curva del eje
-      ..lineTo(cx - 26, h * 0.35); 
-      
-    // Dibujamos el eje completo con curvas suaves
-    final Path fullShaft = Path()
-      ..moveTo(cx - 28, h * 0.85)
-      ..quadraticBezierTo(cx - 32, h * 0.6, cx - 26, h * 0.35)
-      ..quadraticBezierTo(cx - 26, h * 0.32, cx - 32, h * 0.28) // Corona izquierda
-      ..quadraticBezierTo(cx, h * 0.10, cx + 32, h * 0.28) // Punta del glande
-      ..quadraticBezierTo(cx + 26, h * 0.32, cx + 26, h * 0.35) // Corona derecha
-      ..quadraticBezierTo(cx + 32, h * 0.6, cx + 28, h * 0.85) // Curva derecha
-      ..close();
-      
-    canvas.drawPath(fullShaft, shaftPaint);
-    canvas.drawPath(fullShaft, outlinePaint);
-
-    // 2. GLANDE (Cabeza) - Detalle clínico con corona
-    final Paint glansPaint = Paint()..color = tissueDark.withOpacity(0.5)..style = PaintingStyle.fill;
-    final Path glans = Path()
-      ..moveTo(cx - 26, h * 0.35)
-      ..quadraticBezierTo(cx - 26, h * 0.32, cx - 32, h * 0.28)
-      ..quadraticBezierTo(cx, h * 0.10, cx + 32, h * 0.28)
-      ..quadraticBezierTo(cx + 26, h * 0.32, cx + 26, h * 0.35)
-      ..quadraticBezierTo(cx, h * 0.37, cx - 26, h * 0.35); // Línea de la corona
-    canvas.drawPath(glans, glansPaint);
+    // ============================================
+    // 1. ESCROTO (Bolsa escrotal)
+    // ============================================
+    final Paint scrotumPaint = Paint()
+      ..color = tissueBase.withOpacity(0.25)
+      ..style = PaintingStyle.fill;
     
-    // Línea de la corona (detalle anatómico)
-    final Paint coronaPaint = Paint()..color = tissueLight.withOpacity(0.6)..strokeWidth = 1.5..style = PaintingStyle.stroke;
-    canvas.drawPath(glans, coronaPaint);
+    final Path scrotum = Path()
+      ..moveTo(cx - 50, h * 0.88)
+      ..quadraticBezierTo(cx - 55, h * 0.95, cx - 40, h * 0.98)
+      ..quadraticBezierTo(cx, h * 1.02, cx + 40, h * 0.98)
+      ..quadraticBezierTo(cx + 55, h * 0.95, cx + 50, h * 0.88)
+      ..quadraticBezierTo(cx + 45, h * 0.82, cx, h * 0.83)
+      ..quadraticBezierTo(cx - 45, h * 0.82, cx - 50, h * 0.88)
+      ..close();
+    canvas.drawPath(scrotum, scrotumPaint);
+    canvas.drawPath(scrotum, outlinePaint);
 
-    // 3. BASE / ESCROTO (Simplificado clínico)
-    final Paint basePaint = Paint()..color = tissueBase.withOpacity(0.2)..style = PaintingStyle.fill;
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, h * 0.92), width: 80, height: 35), basePaint);
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, h * 0.92), width: 80, height: 35), outlinePaint);
+    // Línea media del escroto (rafe escrotal)
+    final Paint rafePaint = Paint()..color = tissueBase.withOpacity(0.4)..strokeWidth = 1..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(cx, h * 0.84), Offset(cx, h * 0.98), rafePaint);
 
-    // 4. BARRA DE RITMO (La mano)
+    // ============================================
+    // 2. TESTÍCULOS (Dentro del escroto)
+    // ============================================
+    final Paint testiclePaint = Paint()
+      ..color = tissueDark.withOpacity(0.4)
+      ..style = PaintingStyle.fill;
+    
+    // Testículo izquierdo
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(cx - 22, h * 0.92), width: 32, height: 38),
+      testiclePaint,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(cx - 22, h * 0.92), width: 32, height: 38),
+      outlinePaint,
+    );
+
+    // Testículo derecho
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(cx + 22, h * 0.92), width: 32, height: 38),
+      testiclePaint,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(cx + 22, h * 0.92), width: 32, height: 38),
+      outlinePaint,
+    );
+
+    // ============================================
+    // 3. CUERPO DEL PENE (Eje / Shaft)
+    // ============================================
+    final Paint shaftPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          tissueBase.withOpacity(0.3),
+          tissueBase.withOpacity(0.6),
+          tissueBase.withOpacity(0.3),
+        ],
+      ).createShader(Rect.fromLTWH(cx - 30, h * 0.35, 60, h * 0.5))
+      ..style = PaintingStyle.fill;
+
+    final Path shaft = Path()
+      ..moveTo(cx - 28, h * 0.83)
+      ..quadraticBezierTo(cx - 32, h * 0.65, cx - 26, h * 0.40)
+      ..lineTo(cx + 26, h * 0.40)
+      ..quadraticBezierTo(cx + 32, h * 0.65, cx + 28, h * 0.83)
+      ..close();
+    canvas.drawPath(shaft, shaftPaint);
+    canvas.drawPath(shaft, outlinePaint);
+
+    // ============================================
+    // 4. GLANDE (Cabeza del pene) - Forma de bellota
+    // ============================================
+    final Paint glansPaint = Paint()
+      ..color = tissueDark.withOpacity(0.5)
+      ..style = PaintingStyle.fill;
+    
+    final Path glans = Path()
+      ..moveTo(cx - 26, h * 0.40)
+      ..quadraticBezierTo(cx - 28, h * 0.35, cx - 30, h * 0.30)
+      ..quadraticBezierTo(cx - 28, h * 0.20, cx - 20, h * 0.15)
+      ..quadraticBezierTo(cx, h * 0.05, cx + 20, h * 0.15)
+      ..quadraticBezierTo(cx + 28, h * 0.20, cx + 30, h * 0.30)
+      ..quadraticBezierTo(cx + 28, h * 0.35, cx + 26, h * 0.40)
+      ..quadraticBezierTo(cx, h * 0.42, cx - 26, h * 0.40)
+      ..close();
+    canvas.drawPath(glans, glansPaint);
+    canvas.drawPath(glans, outlinePaint);
+
+    // Corona del glande (borde marcado)
+    final Paint coronaPaint = Paint()..color = tissueLight.withOpacity(0.7)..strokeWidth = 2..style = PaintingStyle.stroke;
+    final Path corona = Path()
+      ..moveTo(cx - 28, h * 0.38)
+      ..quadraticBezierTo(cx - 30, h * 0.35, cx - 30, h * 0.30)
+      ..quadraticBezierTo(cx - 28, h * 0.20, cx - 20, h * 0.15)
+      ..quadraticBezierTo(cx, h * 0.05, cx + 20, h * 0.15)
+      ..quadraticBezierTo(cx + 28, h * 0.20, cx + 30, h * 0.30)
+      ..quadraticBezierTo(cx + 30, h * 0.35, cx + 28, h * 0.38);
+    canvas.drawPath(corona, coronaPaint);
+
+    // ============================================
+    // 5. MEATO URETRAL (Salida de la uretra en la punta)
+    // ============================================
+    final Paint meatusPaint = Paint()..color = tissueHighlight.withOpacity(0.8)..style = PaintingStyle.fill;
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(cx, h * 0.12), width: 6, height: 10),
+      meatusPaint,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(cx, h * 0.12), width: 6, height: 10),
+      Paint()..color = tissueDark..strokeWidth = 1..style = PaintingStyle.stroke,
+    );
+
+    // ============================================
+    // 6. FRENILLO (Línea en la parte inferior del glande)
+    // ============================================
+    final Paint frenulumPaint = Paint()..color = tissueLight.withOpacity(0.6)..strokeWidth = 1.5..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(cx, h * 0.38), Offset(cx, h * 0.42), frenulumPaint);
+
+    // ============================================
+    // 7. BARRA DE RITMO (Guía de la mano)
+    // ============================================
     if (isStimulating) {
-      // barProgress va de 0 (base) a 1 (punta). 
-      // Mapeamos: 0 -> h*0.85, 1 -> h*0.20
-      double barY = h * 0.85 - (barProgress * (h * 0.65)); 
+      // barProgress: 0 = base del eje, 1 = punta del glande
+      double barY = h * 0.83 - (barProgress * (h * 0.71)); 
       
       final Paint barPaint = Paint()..color = mainColor..strokeWidth = 6..strokeCap = StrokeCap.round;
       
       // Línea principal de la mano
       canvas.drawLine(Offset(cx - 45, barY), Offset(cx + 45, barY), barPaint);
       
-      // Nudillos / Dedos (círculos en los extremos)
+      // Nudillos / Dedos
       canvas.drawCircle(Offset(cx - 45, barY), 10, Paint()..color = mainColor.withOpacity(0.9));
       canvas.drawCircle(Offset(cx + 45, barY), 10, Paint()..color = mainColor.withOpacity(0.9));
       
-      // Brillo en el centro de la barra
+      // Brillo en el centro
       canvas.drawCircle(Offset(cx, barY), 4, Paint()..color = Colors.white.withOpacity(0.8));
     } else {
-      // Fase de parada: La barra se detiene en la base y palpita
+      // Fase de parada
       final Paint restPaint = Paint()..color = mainColor.withOpacity(0.5)..strokeWidth = 4;
-      canvas.drawLine(Offset(cx - 35, h * 0.85), Offset(cx + 35, h * 0.85), restPaint);
-      
-      // Indicador de "Soltar"
-      canvas.drawCircle(Offset(cx, h * 0.85), 12, Paint()..color = mainColor.withOpacity(0.2));
+      canvas.drawLine(Offset(cx - 35, h * 0.83), Offset(cx + 35, h * 0.83), restPaint);
+      canvas.drawCircle(Offset(cx, h * 0.83), 12, Paint()..color = mainColor.withOpacity(0.2));
     }
 
     // Etiquetas clínicas
