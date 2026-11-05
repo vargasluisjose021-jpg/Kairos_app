@@ -192,29 +192,35 @@ class _StartStopScreenState extends State<StartStopScreen> with TickerProviderSt
                     borderRadius: BorderRadius.circular(15), 
                     border: Border.all(color: mainColor.withOpacity(0.3), width: 2)
                   ),
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: Image.asset(
-                          'assets/images/1793847033003.jpg',
-                          fit: BoxFit.contain,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(13),
+                    child: Stack(
+                      children: [
+                        // IMAGEN QUE LLENA TODO EL ESPACIO
+                        Positioned.fill(
+                          child: Image.asset(
+                            'assets/images/1793847033003.jpg',
+                            fit: BoxFit.cover, // CAMBIO CLAVE: ahora llena todo
+                            alignment: Alignment.center,
+                          ),
                         ),
-                      ),
-                      Positioned.fill(
-                        child: AnimatedBuilder(
-                          animation: _barAnimation,
-                          builder: (context, child) {
-                            return CustomPaint(
-                              painter: BarOnlyPainter(
-                                isStimulating: isStimulating,
-                                barProgress: _barAnimation.value,
-                                mainColor: mainColor,
-                              ),
-                            );
-                          },
+                        // BARRA ANIMADA
+                        Positioned.fill(
+                          child: AnimatedBuilder(
+                            animation: _barAnimation,
+                            builder: (context, child) {
+                              return CustomPaint(
+                                painter: BarOnlyPainter(
+                                  isStimulating: isStimulating,
+                                  barProgress: _barAnimation.value,
+                                  mainColor: mainColor,
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -282,8 +288,9 @@ class BarOnlyPainter extends CustomPainter {
     final double h = size.height;
     final double cx = w / 2;
 
-    final double topLimit = h * 0.15;
-    final double bottomLimit = h * 0.75;
+    // Límites ajustados para que la barra coincida con el cuerpo del pene en la imagen
+    final double topLimit = h * 0.25;
+    final double bottomLimit = h * 0.70;
 
     if (isStimulating) {
       double barY = bottomLimit - (barProgress * (bottomLimit - topLimit));
