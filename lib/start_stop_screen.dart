@@ -183,7 +183,6 @@ class _StartStopScreenState extends State<StartStopScreen> with TickerProviderSt
               Text('Ciclo ${_cyclesCompleted + 1} de $_targetCycles', style: const TextStyle(fontSize: 18, color: Colors.white70)),
               const SizedBox(height: 20),
               
-              // OPTIMIZACIÓN: Stack con imagen estática + barra animada
               Expanded(
                 flex: 2,
                 child: Container(
@@ -195,14 +194,12 @@ class _StartStopScreenState extends State<StartStopScreen> with TickerProviderSt
                   ),
                   child: Stack(
                     children: [
-                      // CAPA 1: Imagen fotorrealista estática de fondo
                       Positioned.fill(
                         child: Image.asset(
-                          'assets/images/anatomical_guide.png',
+                          'assets/images/1793847033003.jpg',
                           fit: BoxFit.contain,
                         ),
                       ),
-                      // CAPA 2: Barra de ritmo animada (muy ligera, solo dibuja la barra)
                       Positioned.fill(
                         child: AnimatedBuilder(
                           animation: _barAnimation,
@@ -272,9 +269,6 @@ class _StartStopScreenState extends State<StartStopScreen> with TickerProviderSt
   }
 }
 
-// ============================================
-// PINTOR OPTIMIZADO (SOLO DIBUJA LA BARRA)
-// ============================================
 class BarOnlyPainter extends CustomPainter {
   final bool isStimulating;
   final double barProgress;
@@ -288,33 +282,26 @@ class BarOnlyPainter extends CustomPainter {
     final double h = size.height;
     final double cx = w / 2;
 
-    // Límites donde se moverá la barra sobre la imagen
     final double topLimit = h * 0.15;
     final double bottomLimit = h * 0.75;
 
     if (isStimulating) {
       double barY = bottomLimit - (barProgress * (bottomLimit - topLimit));
 
-      // Sombra de la barra para darle relieve 3D
       canvas.drawLine(
         Offset(cx - 45, barY + 2), 
         Offset(cx + 45, barY + 2), 
         Paint()..color = Colors.black.withOpacity(0.6)..strokeWidth = 8..strokeCap = StrokeCap.round
       );
 
-      // Línea principal de la barra de ritmo
       final Paint barPaint = Paint()..color = mainColor..strokeWidth = 6..strokeCap = StrokeCap.round;
       canvas.drawLine(Offset(cx - 45, barY), Offset(cx + 45, barY), barPaint);
 
-      // Extremos circulares de la barra (manos)
       final Paint handlePaint = Paint()..color = mainColor;
       canvas.drawCircle(Offset(cx - 45, barY), 9, handlePaint);
       canvas.drawCircle(Offset(cx + 45, barY), 9, handlePaint);
-
-      // Indicador central blanco
       canvas.drawCircle(Offset(cx, barY), 4, Paint()..color = Colors.white);
     } else {
-      // Estado de descanso (Parada)
       final Paint restPaint = Paint()..color = mainColor.withOpacity(0.6)..strokeWidth = 4..strokeCap = StrokeCap.round;
       canvas.drawLine(Offset(cx - 35, bottomLimit), Offset(cx + 35, bottomLimit), restPaint);
       canvas.drawCircle(Offset(cx, bottomLimit), 10, Paint()..color = mainColor.withOpacity(0.3));
