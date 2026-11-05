@@ -27,11 +27,12 @@ class _StartStopScreenState extends State<StartStopScreen> with TickerProviderSt
   @override
   void initState() {
     super.initState();
-    // CLÍNICO: 800ms por ciclo completo (aprox. 75 movimientos/minuto, ritmo controlado)
+    // CLÍNICO: 400ms para subir, 400ms para bajar (0.8s por ciclo = ~75 movimientos/minuto)
     _barController = AnimationController(
       vsync: this, 
-      duration: const Duration(milliseconds: 800), 
+      duration: const Duration(milliseconds: 400), 
     );
+    // Usamos easeInOut para simular la aceleración natural de la mano
     _barAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _barController, curve: Curves.easeInOut)
     );
@@ -55,7 +56,7 @@ class _StartStopScreenState extends State<StartStopScreen> with TickerProviderSt
 
   void _runStartPhase() {
     _timeRemaining = widget.user.trainingRhythmStimulateSeconds;
-    // CLÍNICO: La barra se repite infinitamente (sube y baja) durante la fase
+    // La barra se repite infinitamente de forma fluida
     _barController.repeat(reverse: true); 
     
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
@@ -68,7 +69,7 @@ class _StartStopScreenState extends State<StartStopScreen> with TickerProviderSt
   }
 
   void _runStopPhase() {
-    _barController.stop(); // La barra se detiene en la base
+    _barController.stop(); 
     _timeRemaining = widget.user.trainingRhythmRestSeconds;
     setState(() => _phase = 2);
     HapticFeedback.mediumImpact();
@@ -220,12 +221,18 @@ class _StartStopScreenState extends State<StartStopScreen> with TickerProviderSt
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(15), border: Border.all(color: mainColor.withOpacity(0.3), width: 2)),
-                  child: CustomPaint(
-                    painter: ClinicalSilhouettePainter(
-                      isStimulating: isStimulating,
-                      barProgress: _barAnimation.value,
-                      mainColor: mainColor,
-                    ),
+                  // CLAVE: Usamos AnimatedBuilder para que la animación sea fluida y no salte
+                  child: AnimatedBuilder(
+                    animation: _barAnimation,
+                    builder: (context, child) {
+                      return CustomPaint(
+                        painter: ClinicalSilhouettePainter(
+                          isStimulating: isStimulating,
+                          barProgress: _barAnimation.value,
+                          mainColor: mainColor,
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -282,10 +289,10 @@ class _StartStopScreenState extends State<StartStopScreen> with TickerProviderSt
   }
 }
 
-// Ilustración Anatómica Clínica Mejorada
+// Ilustración Anatómica Clínica Realista y Movimiento Fluido
 class ClinicalSilhouettePainter extends CustomPainter {
   final bool isStimulating;
-  final double barProgress;
+  final double barProgress; // 0.0 (base) a 1.0 (punta)
   final Color mainColor;
 
   ClinicalSilhouettePainter({required this.isStimulating, required this.barProgress, required this.mainColor});
@@ -296,63 +303,85 @@ class ClinicalSilhouettePainter extends CustomPainter {
     final double h = size.height;
     final double cx = w / 2;
 
-    // Fondo clínico oscuro
+    // Fondo clínico
     canvas.drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..color = const Color(0xFF1A1A2E));
 
-    // Colores anatómicos clínicos
+    // Colores anatómicos
     final Color tissueBase = const Color(0xFF4A90E2);
     final Color tissueDark = const Color(0xFF0077B6);
+    final Color tissueLight = const Color(0xFF90E0EF);
 
-    // 1. Cuerpo Cavernoso (Eje / Shaft)
-    final Paint shaftPaint = Paint()..color = tissueBase.withOpacity(0.4)..style = PaintingStyle.fill;
+    // 1. CUERPO (Shaft) - Forma orgánica, no recta
+    final Paint shaftPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft, end: Alignment.centerRight,
+        colors: [tissueBase.withOpacity(0.3), tissueBase.withOpacity(0.6), tissueBase.withOpacity(0.3)],
+      ).createShader(Rect.fromLTWH(cx - 35, h * 0.3, 70, h * 0.6))
+      ..style = PaintingStyle.fill;
+      
     final Paint outlinePaint = Paint()..color = tissueBase..style = PaintingStyle.stroke..strokeWidth = 2;
 
     final Path shaft = Path()
-      ..moveTo(cx - 25, h * 0.85)
-      ..lineTo(cx - 22, h * 0.35)
-      ..quadraticBezierTo(cx - 22, h * 0.25, cx - 15, h * 0.20)
-      ..quadraticBezierTo(cx, h * 0.05, cx + 15, h * 0.20)
-      ..quadraticBezierTo(cx + 22, h * 0.25, cx + 22, h * 0.35)
-      ..lineTo(cx + 25, h * 0.85)
+      ..moveTo(cx - 28, h * 0.85) // Base izquierda
+      ..quadraticBezierTo(cx - 32, h * 0.6, cx - 26, h * 0.35) // Curva del eje
+      ..lineTo(cx - 26, h * 0.35); 
+      
+    // Dibujamos el eje completo con curvas suaves
+    final Path fullShaft = Path()
+      ..moveTo(cx - 28, h * 0.85)
+      ..quadraticBezierTo(cx - 32, h * 0.6, cx - 26, h * 0.35)
+      ..quadraticBezierTo(cx - 26, h * 0.32, cx - 32, h * 0.28) // Corona izquierda
+      ..quadraticBezierTo(cx, h * 0.10, cx + 32, h * 0.28) // Punta del glande
+      ..quadraticBezierTo(cx + 26, h * 0.32, cx + 26, h * 0.35) // Corona derecha
+      ..quadraticBezierTo(cx + 32, h * 0.6, cx + 28, h * 0.85) // Curva derecha
       ..close();
-    canvas.drawPath(shaft, shaftPaint);
-    canvas.drawPath(shaft, outlinePaint);
+      
+    canvas.drawPath(fullShaft, shaftPaint);
+    canvas.drawPath(fullShaft, outlinePaint);
 
-    // 2. Glande (Cabeza) - Detalle clínico
-    final Paint glansPaint = Paint()..color = tissueDark.withOpacity(0.6)..style = PaintingStyle.fill;
+    // 2. GLANDE (Cabeza) - Detalle clínico con corona
+    final Paint glansPaint = Paint()..color = tissueDark.withOpacity(0.5)..style = PaintingStyle.fill;
     final Path glans = Path()
-      ..moveTo(cx - 22, h * 0.35)
-      ..quadraticBezierTo(cx - 22, h * 0.25, cx - 15, h * 0.20)
-      ..quadraticBezierTo(cx, h * 0.05, cx + 15, h * 0.20)
-      ..quadraticBezierTo(cx + 22, h * 0.25, cx + 22, h * 0.35)
-      ..quadraticBezierTo(cx, h * 0.38, cx - 22, h * 0.35); // Corona
+      ..moveTo(cx - 26, h * 0.35)
+      ..quadraticBezierTo(cx - 26, h * 0.32, cx - 32, h * 0.28)
+      ..quadraticBezierTo(cx, h * 0.10, cx + 32, h * 0.28)
+      ..quadraticBezierTo(cx + 26, h * 0.32, cx + 26, h * 0.35)
+      ..quadraticBezierTo(cx, h * 0.37, cx - 26, h * 0.35); // Línea de la corona
     canvas.drawPath(glans, glansPaint);
-    canvas.drawPath(glans, outlinePaint);
+    
+    // Línea de la corona (detalle anatómico)
+    final Paint coronaPaint = Paint()..color = tissueLight.withOpacity(0.6)..strokeWidth = 1.5..style = PaintingStyle.stroke;
+    canvas.drawPath(glans, coronaPaint);
 
-    // 3. Base / Escroto (Simplificado clínico)
-    final Paint basePaint = Paint()..color = tissueBase.withOpacity(0.3)..style = PaintingStyle.fill;
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, h * 0.90), width: 70, height: 30), basePaint);
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, h * 0.90), width: 70, height: 30), outlinePaint);
+    // 3. BASE / ESCROTO (Simplificado clínico)
+    final Paint basePaint = Paint()..color = tissueBase.withOpacity(0.2)..style = PaintingStyle.fill;
+    canvas.drawOval(Rect.fromCenter(center: Offset(cx, h * 0.92), width: 80, height: 35), basePaint);
+    canvas.drawOval(Rect.fromCenter(center: Offset(cx, h * 0.92), width: 80, height: 35), outlinePaint);
 
-    // 4. Barra de Ritmo Animada (Guía de la mano)
+    // 4. BARRA DE RITMO (La mano)
     if (isStimulating) {
-      // La barra se mueve a lo largo del eje
-      double barY = h * 0.85 - (barProgress * (h * 0.55)); 
-      final Paint barPaint = Paint()..color = mainColor..strokeWidth = 5..strokeCap = StrokeCap.round;
+      // barProgress va de 0 (base) a 1 (punta). 
+      // Mapeamos: 0 -> h*0.85, 1 -> h*0.20
+      double barY = h * 0.85 - (barProgress * (h * 0.65)); 
       
-      // Línea de la mano
-      canvas.drawLine(Offset(cx - 40, barY), Offset(cx + 40, barY), barPaint);
+      final Paint barPaint = Paint()..color = mainColor..strokeWidth = 6..strokeCap = StrokeCap.round;
       
-      // Indicadores de agarre
-      canvas.drawCircle(Offset(cx - 40, barY), 8, Paint()..color = mainColor.withOpacity(0.8));
-      canvas.drawCircle(Offset(cx + 40, barY), 8, Paint()..color = mainColor.withOpacity(0.8));
+      // Línea principal de la mano
+      canvas.drawLine(Offset(cx - 45, barY), Offset(cx + 45, barY), barPaint);
+      
+      // Nudillos / Dedos (círculos en los extremos)
+      canvas.drawCircle(Offset(cx - 45, barY), 10, Paint()..color = mainColor.withOpacity(0.9));
+      canvas.drawCircle(Offset(cx + 45, barY), 10, Paint()..color = mainColor.withOpacity(0.9));
+      
+      // Brillo en el centro de la barra
+      canvas.drawCircle(Offset(cx, barY), 4, Paint()..color = Colors.white.withOpacity(0.8));
     } else {
       // Fase de parada: La barra se detiene en la base y palpita
       final Paint restPaint = Paint()..color = mainColor.withOpacity(0.5)..strokeWidth = 4;
       canvas.drawLine(Offset(cx - 35, h * 0.85), Offset(cx + 35, h * 0.85), restPaint);
       
       // Indicador de "Soltar"
-      canvas.drawCircle(Offset(cx, h * 0.85), 10, Paint()..color = mainColor.withOpacity(0.3));
+      canvas.drawCircle(Offset(cx, h * 0.85), 12, Paint()..color = mainColor.withOpacity(0.2));
     }
 
     // Etiquetas clínicas
