@@ -51,9 +51,10 @@ class User {
     age = selectedAge;
     // Asignar MELT base según edad si no se hizo el test
     if (baselineMelt == null) {
-      if (age >= 14 && age <= 17) baselineMelt = 120;
-      else if (age >= 18 && age <= 30) baselineMelt = 180;
-      else if (age >= 31 && age <= 50) baselineMelt = 300;
+      final currentAge = age ?? 25; // Fallback seguro a 25 años para evitar errores nulos
+      if (currentAge >= 14 && currentAge <= 17) baselineMelt = 120;
+      else if (currentAge >= 18 && currentAge <= 30) baselineMelt = 180;
+      else if (currentAge >= 31 && currentAge <= 50) baselineMelt = 300;
       else baselineMelt = 360;
     }
   }
