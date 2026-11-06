@@ -14,23 +14,38 @@ class EdgingScreen extends StatefulWidget {
 }
 
 class _EdgingScreenState extends State<EdgingScreen> with TickerProviderStateMixin {
-  int _phase = 0;
+  int _phase = 0; 
   int _introStep = 0;
   int _timeRemaining = 0;
+  int _currentCycle = 1;
+  final int _totalCycles = 3; 
   Timer? _timer;
   bool _isRunning = false;
   
   late AnimationController _barController;
   late Animation<double> _barAnimation;
   
-  // TIEMPOS FIJOS PARA EVITAR ERRORES DE COMPILACIÓN
-  final int _phase1Duration = 126; 
-  final int _phase2Duration = 45;  
+  // Variables clínicas dinámicas
+  late int _phase1Duration; 
+  late int _barSpeed;
+  late int _currentLevel;
+  final int _phase2Duration = 45; 
 
   @override
   void initState() {
     super.initState();
-    _barController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    
+    // 1. Obtener nivel actual (Si es la primera vez, empieza en Nivel 1)
+    _currentLevel = widget.user.edgingLevel ?? 1;
+    
+    // 2. CÁLCULO CLÍNICO DINÁMICO:
+    // Base: 126s. Cada nivel aumenta un 10% el tiempo de estimulación.
+    _phase1Duration = (126 * (1 + (_currentLevel - 1) * 0.10)).round();
+    
+    // Ritmo de la barra: Nivel 1 = 400ms. Nivel 10 = 200ms (más rápido = más difícil).
+    _barSpeed = (400 - (_currentLevel - 1) * 22).clamp(200, 400);
+
+    _barController = AnimationController(vsync: this, duration: Duration(milliseconds: _barSpeed));
     _barAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _barController, curve: Curves.easeInOut));
   }
 
@@ -40,14 +55,14 @@ class _EdgingScreenState extends State<EdgingScreen> with TickerProviderStateMix
   }
 
   void _startSession() {
-    setState(() { _phase = 1; _isRunning = true; });
+    setState(() { _phase = 1; _isRunning = true; _currentCycle = 1; });
     _runPhase1();
   }
 
   void _runPhase1() {
     _timeRemaining = _phase1Duration;
-    _barController.duration = const Duration(milliseconds: 400);
-    _barController.repeat(reverse: true);
+    _barController.duration = Duration(milliseconds: _barSpeed);
+    _barController.repeat(reverse: true); 
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!_isRunning) { t.cancel(); return; }
@@ -60,13 +75,25 @@ class _EdgingScreenState extends State<EdgingScreen> with TickerProviderStateMix
     _timeRemaining = _phase2Duration;
     setState(() => _phase = 2);
     HapticFeedback.mediumImpact();
+    
+    // En la meseta, la barra siempre va a 800ms (ritmo de control y respiración)
     _barController.duration = const Duration(milliseconds: 800);
-    _barController.forward(from: 0.0); 
+    _barController.repeat(reverse: true); 
+    
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!_isRunning) { t.cancel(); return; }
-      if (_timeRemaining > 0) { setState(() => _timeRemaining--); } 
-      else { _finishPhase(); }
+      if (_timeRemaining > 0) { 
+        setState(() => _timeRemaining--); 
+      } else {
+        if (_currentCycle < _totalCycles) {
+          setState(() { _currentCycle++; _phase = 1; });
+          HapticFeedback.mediumImpact();
+          _runPhase1();
+        } else {
+          _finishPhase();
+        }
+      }
     });
   }
 
@@ -90,15 +117,25 @@ class _EdgingScreenState extends State<EdgingScreen> with TickerProviderStateMix
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
         title: const Text('⚠️ Cruzaste el Límite', style: TextStyle(color: Colors.redAccent)),
-        content: const Text('Si eyaculaste o estuviste a punto, no te preocupes. Es parte del entrenamiento.', style: TextStyle(color: Colors.white70)),
-        actions: [TextButton(onPressed: () { Navigator.pop(context); _finishSession(successful: false); }, child: const Text('Entendido', style: TextStyle(color: Color(0xFF00B4D8))))],
+        content: const Text('Si eyaculaste o estuviste a punto, no te preocupes. La app reducirá la dificultad en la próxima sesión para reconstruir tu control.', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () { Navigator.pop(context); _finishSession(successful: false); }, 
+            child: const Text('Entendido', style: TextStyle(color: Color(0xFF00B4D8)))
+          )
+        ],
       ),
     );
   }
 
   void _finishSession({required bool successful}) async {
-    if (successful) { widget.user.registerSuccessfulSession(3); } 
-    else { widget.user.totalSessions++; widget.user.updatedAt = DateTime.now(); }
+    // ALGORITMO CLÍNICO DE ADAPTACIÓN DINÁMICA
+    if (successful) { 
+      widget.user.registerSuccessfulSession(3); // Sube de nivel (máx 10)
+    } else { 
+      widget.user.registerFailedSession(3); // Baja de nivel (mín 1) para evitar ansiedad
+    }
+    
     await widget.isar.writeTxn(() => widget.isar.users.put(widget.user));
     if (!mounted) return;
     Navigator.pop(context);
@@ -134,7 +171,7 @@ class _EdgingScreenState extends State<EdgingScreen> with TickerProviderStateMix
                 Padding(padding: const EdgeInsets.symmetric(horizontal: 10.0), child: Text(
                   _introStep == 0 ? 'Es la técnica de mantenerse en el borde del orgasmo (Nivel 7-8) sin cruzar al punto de no retorno.' 
                   : _introStep == 1 ? 'Primero subirás al Nivel 7 con ritmo normal. Luego, la barra se volverá LENTA: debes bajar la intensidad de tu mano.' 
-                  : _introStep == 2 ? 'Fase 1: ${_phase1Duration}s de estimulación normal. Fase 2: ${_phase2Duration}s en meseta (ritmo lento).' 
+                  : _introStep == 2 ? 'Nivel Actual: $_currentLevel.\nHaremos $_totalCycles ciclos de: ${_phase1Duration}s subida + ${_phase2Duration}s meseta.' 
                   : 'El Edging enseña a tu cerebro que la alta excitación no es una emergencia.',
                   style: const TextStyle(fontSize: 16, color: Colors.white70, height: 1.5), textAlign: TextAlign.center,
                 )),
@@ -146,6 +183,8 @@ class _EdgingScreenState extends State<EdgingScreen> with TickerProviderStateMix
             ],
             if (_phase == 1 || _phase == 2) ...[
               Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: mainColor.withOpacity(0.2), borderRadius: BorderRadius.circular(20), border: Border.all(color: mainColor, width: 1)), child: Text(isPhase1 ? 'FASE 1: SUBIDA AL NIVEL 7' : 'FASE 2: MESETA (Ritmo Lento)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: mainColor))),
+              const SizedBox(height: 10),
+              Text('Ciclo $_currentCycle de $_totalCycles | Nivel $_currentLevel', style: const TextStyle(fontSize: 16, color: Colors.white70)),
               const SizedBox(height: 10),
               Expanded(flex: 2, child: Container(width: double.infinity, decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(15), border: Border.all(color: mainColor.withOpacity(0.3), width: 2)), child: ClipRRect(borderRadius: BorderRadius.circular(13), child: Stack(children: [
                 Positioned.fill(child: Image.asset('assets/images/1793847033003.jpg', fit: BoxFit.cover, alignment: Alignment.center)),
@@ -163,7 +202,9 @@ class _EdgingScreenState extends State<EdgingScreen> with TickerProviderStateMix
               const Spacer(),
               const Icon(Icons.check_circle, size: 80, color: Color(0xFF00E676)),
               const SizedBox(height: 20),
-              const Text('¡Meseta Completada!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+              const Text('¡Entrenamiento Completado!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+              const SizedBox(height: 10),
+              Text('Completaste $_totalCycles ciclos de Edging', style: const TextStyle(fontSize: 16, color: Colors.white70)),
               const SizedBox(height: 40),
               SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () => _finishSession(successful: true), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00E676), padding: const EdgeInsets.symmetric(vertical: 18)), child: const Text('✅ MANTUVE EL CONTROL', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)))),
               const SizedBox(height: 15),
