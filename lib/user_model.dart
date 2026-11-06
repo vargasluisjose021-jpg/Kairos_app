@@ -16,8 +16,13 @@ class User {
   // ==========================================
   // 2. DATOS DE PROGRESO GENERAL
   // ==========================================
-  int totalSessions = 0; // No nullable para evitar errores de ++
+  int totalSessions = 0;
   DateTime? updatedAt;
+  
+  // NUEVO: Datos para la pantalla de estadísticas
+  int? baselineMelt;       // Tiempo MELT inicial (para comparar evolución)
+  int? streakDays;         // Racha de días consecutivos entrenando
+  DateTime? lastSessionDate; // Fecha de la última sesión (para calcular la racha)
 
   // ==========================================
   // 3. DATOS MÓDULO 1 (SUELO PÉLVICO)
@@ -31,12 +36,12 @@ class User {
   // ==========================================
   int trainingRhythmStimulateSeconds = 60; 
   int trainingRhythmRestSeconds = 30;      
-  int? startStopLevel; // NUEVO: Nivel de dificultad dinámica (1 al 10)
+  int? startStopLevel; 
 
   // ==========================================
   // 5. DATOS MÓDULO 3 (EDGING)
   // ==========================================
-  int? edgingLevel; // NUEVO: Nivel de dificultad dinámica (1 al 10)
+  int? edgingLevel; 
 
   // ==========================================
   // 6. MÉTODOS CLÍNICOS
@@ -44,14 +49,32 @@ class User {
   
   void configureByAge(int selectedAge) {
     age = selectedAge;
-    // Configuración clínica base según edad si es necesaria
+    // Asignar MELT base según edad si no se hizo el test
+    if (baselineMelt == null) {
+      if (age >= 14 && age <= 17) baselineMelt = 120;
+      else if (age >= 18 && age <= 30) baselineMelt = 180;
+      else if (age >= 31 && age <= 50) baselineMelt = 300;
+      else baselineMelt = 360;
+    }
   }
 
-  // Algoritmo de Adaptación Dinámica (Exposición Graduada)
-  // Si el usuario tiene éxito, sube de nivel (máximo 10)
   void registerSuccessfulSession(int module) {
     totalSessions++;
     updatedAt = DateTime.now();
+    
+    // Lógica de racha clínica
+    final today = DateTime.now();
+    if (lastSessionDate != null) {
+      final difference = today.difference(lastSessionDate!).inDays;
+      if (difference == 1) {
+        streakDays = (streakDays ?? 0) + 1; // Suma un día si es consecutivo
+      } else if (difference > 1) {
+        streakDays = 1; // Reinicia la racha si pasó más de un día
+      }
+    } else {
+      streakDays = 1; // Primera sesión
+    }
+    lastSessionDate = today;
 
     if (module == 2) {
       startStopLevel = ((startStopLevel ?? 1) + 1).clamp(1, 10);
@@ -60,10 +83,23 @@ class User {
     }
   }
 
-  // Si el usuario falla, baja de nivel para evitar ansiedad de desempeño
   void registerFailedSession(int module) {
     totalSessions++;
     updatedAt = DateTime.now();
+    
+    // La racha se mantiene si entrena aunque falle, pero no sube de nivel
+    final today = DateTime.now();
+    if (lastSessionDate != null) {
+      final difference = today.difference(lastSessionDate!).inDays;
+      if (difference == 1) {
+        streakDays = (streakDays ?? 0) + 1; 
+      } else if (difference > 1) {
+        streakDays = 1; 
+      }
+    } else {
+      streakDays = 1;
+    }
+    lastSessionDate = today;
 
     if (module == 2) {
       startStopLevel = ((startStopLevel ?? 1) - 1).clamp(1, 10);
