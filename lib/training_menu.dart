@@ -4,6 +4,7 @@ import 'user_model.dart';
 import 'pelvic_screen.dart';
 import 'start_stop_screen.dart';
 import 'edging_screen.dart';
+import 'squeeze_screen.dart';
 
 class TrainingMenu extends StatelessWidget {
   final Isar isar;
@@ -40,7 +41,7 @@ class TrainingMenu extends StatelessWidget {
                   const SizedBox(height: 15),
                   _buildModuleCard(context, moduleNumber: 3, title: 'Edging', subtitle: 'Resistencia en la meseta', icon: Icons.show_chart, color: const Color(0xFF00E676), isLocked: isUnderage, onTap: isUnderage ? null : () => Navigator.push(context, MaterialPageRoute(builder: (context) => EdgingScreen(isar: isar, user: user)))),
                   const SizedBox(height: 15),
-                  _buildModuleCard(context, moduleNumber: 4, title: 'Control Total', subtitle: 'Técnica Squeeze & Breath', icon: Icons.lock, color: Colors.grey, isLocked: true, onTap: null),
+                  _buildModuleCard(context, moduleNumber: 4, title: 'Control Total', subtitle: 'Técnica Squeeze & Breath', icon: Icons.pan_tool, color: const Color(0xFFFF9F1C), isLocked: isUnderage, onTap: isUnderage ? null : () => Navigator.push(context, MaterialPageRoute(builder: (context) => SqueezeScreen(isar: isar, user: user)))),
                 ],
               ),
             ),
@@ -67,8 +68,7 @@ class TrainingMenu extends StatelessWidget {
                   Row(
                     children: [
                       Text('Módulo $moduleNumber', style: TextStyle(fontSize: 12, color: isLocked ? Colors.grey[600] : color, fontWeight: FontWeight.bold)),
-                      if (isLocked && moduleNumber < 4) ...[const SizedBox(width: 8), Icon(Icons.lock, size: 12, color: Colors.grey[600])],
-                      if (moduleNumber == 4) ...[const SizedBox(width: 8), Text('PRÓXIMAMENTE', style: TextStyle(fontSize: 10, color: Colors.grey[600], fontWeight: FontWeight.bold))],
+                      if (isLocked) ...[const SizedBox(width: 8), Icon(Icons.lock, size: 12, color: Colors.grey[600])],
                     ],
                   ),
                   const SizedBox(height: 5),
