@@ -5,6 +5,7 @@ import 'pelvic_screen.dart';
 import 'start_stop_screen.dart';
 import 'edging_screen.dart';
 import 'squeeze_screen.dart';
+import 'progress_screen.dart';
 
 class TrainingMenu extends StatelessWidget {
   final Isar isar;
@@ -31,7 +32,20 @@ class TrainingMenu extends StatelessWidget {
             const Text('Selecciona tu módulo', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
             const SizedBox(height: 10),
             Text('Completa cada módulo en orden para mejores resultados', style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.6))),
-            const SizedBox(height: 30),
+            
+            // BOTÓN DE PROGRESO CLÍNICO
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProgressScreen(isar: isar, user: user))),
+                icon: const Icon(Icons.bar_chart, color: Colors.black),
+                label: const Text('VER MI PROGRESO CLÍNICO', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
+              ),
+            ),
+            const SizedBox(height: 20),
+
             Expanded(
               child: ListView(
                 children: [
